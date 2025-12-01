@@ -4,6 +4,9 @@ Gulf Coast Network Monitoring Analysis Tools
 
 ## Description
 
+**Work in Progress**: This package is under active development. 
+Function signatures and behavior may change without notice.
+
 This package provides tools and functions for analyzing coastal monitoring data from Gulf Coast Network National Park units. It includes data processing, analysis, and visualization capabilities for coastal ecosystem monitoring.
 
 ## Installation
