@@ -1,0 +1,28 @@
+Package: GULNcoastal
+Type: Package
+Title: Gulf Coast Network Coastal Monitoring Analysis Tools
+Version: 0.1.0
+Authors@R: person("Alisa", "Glenewinkel-Meyer", email = "alisa.glenewinkel@gmail.com",
+                  role = c("aut", "cre"))
+Description: Tools and functions for analyzing coastal monitoring data from
+    Gulf Coast Network park units. This package provides data processing,
+    analysis, and visualization capabilities for coastal ecosystem monitoring.
+License: CC0
+Encoding: UTF-8
+LazyData: true
+Imports:
+    ggplot2,
+    readr,
+    dplyr,
+    stringr,
+    here,
+    magrittr,
+    tibble,
+    withr,
+    viridis,
+    patchwork
+RoxygenNote: 7.3.3
+Suggests: 
+    testthat (>= 3.0.0),
+    vdiffr
+Config/testthat/edition: 3
