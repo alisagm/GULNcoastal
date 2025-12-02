@@ -23,8 +23,7 @@
 #'   files. Each CSV must have columns: transect, year, distance, elevation.
 #'   Park is inferred from filename (must contain "GUIS" or "PAIS").
 #' @param output_dir Character. Path to save results. Default is current
-
-#'   working directory. Created if it doesn
+#'   working directory. Created if it doesn't exist.
 #' @param accuracy_table_path Character or NULL. Path to accuracy_values.csv
 #'   file containing measurement uncertainty by park/year. If NULL (default),
 #'   looks for "accuracy_values.csv" in \code{data_dir}.
@@ -32,7 +31,7 @@
 #'   file containing transect-specific accuracy overrides. If NULL (default),
 #'   looks for "special_cases.csv" in \code{data_dir}. This file is optional.
 #' @param save_results Logical. If TRUE (default), saves results using
-#'
+#'  \code{export_all_results()}.
 #' @param verbose Logical. If TRUE, prints progress messages. Default FALSE.
 #'
 #' @return A list (returned invisibly) containing:
