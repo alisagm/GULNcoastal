@@ -110,7 +110,7 @@ round_uncertainty <- function(uncertainty, sig_figs = 2) {
 #' @export
 save_topo_transects_rds <- function(data,
                                     auc_results,
-                                    output_dir = getwd(),
+                                    output_dir = output_dir,
                                     date = format(Sys.Date(), "%Y%m%d"),
                                     verbose = TRUE) {
 
@@ -196,7 +196,7 @@ save_topo_transects_rds <- function(data,
 #' @importFrom readr write_csv
 #' @export
 export_transect_profiles_csv <- function(data, park,
-                                         output_dir = getwd(),
+                                         output_dir = output_dir,
                                          date = format(Sys.Date(), "%Y%m%d"),
                                          verbose = TRUE) {
 
@@ -306,7 +306,7 @@ export_transect_profiles_csv <- function(data, park,
 #' @importFrom readr write_csv
 #' @export
 export_auc_csv <- function(auc_results, data, park,
-                           output_dir = getwd(),
+                           output_dir = output_dir,
                            date = format(Sys.Date(), "%Y%m%d"),
                            verbose = TRUE) {
 
@@ -394,7 +394,7 @@ export_auc_csv <- function(auc_results, data, park,
 #' }
 #' @export
 export_park_files <- function(data, auc_results, park,
-                              output_dir = getwd(),
+                              output_dir = output_dir,
                               date = format(Sys.Date(), "%Y%m%d"),
                               verbose = TRUE) {
 
@@ -447,8 +447,8 @@ export_park_files <- function(data, auc_results, park,
 #' }
 #' @export
 export_all_results <- function(data, auc_results,
-                               processed_dir = getwd(),
-                               output_dir = getwd(),
+                               processed_dir = processed_dir,
+                               output_dir = output_dir,
                                date = format(Sys.Date(), "%Y%m%d"),
                                verbose = TRUE) {
 
@@ -510,7 +510,7 @@ export_all_results <- function(data, auc_results,
 #' }
 #' @export
 load_topo_transects_rds <- function(filepath = NULL,
-                                    input_dir = getwd(),
+                                    input_dir = input_dir,
                                     verbose = TRUE) {
 
   # If no filepath provided, find most recent file
@@ -574,8 +574,7 @@ load_topo_transects_rds <- function(filepath = NULL,
 #' Lists all topo_transects RDS files in the specified directory with
 #' file information (size, modification time).
 #'
-#' @param input_dir Character. Directory to search. Default: current
-#'   working directory
+#' @param input_dir Character. Directory to search.
 #' @return Data frame with file information (filename, path, size_mb, modified),
 #'   or NULL if no files found
 #' @examples
@@ -585,7 +584,7 @@ load_topo_transects_rds <- function(filepath = NULL,
 #' @importFrom tibble tibble
 #' @importFrom dplyr arrange desc
 #' @export
-list_topo_transect_files <- function(input_dir = getwd()) {
+list_topo_transect_files <- function(input_dir = input_dir) {
 
   if (!dir.exists(input_dir)) {
     return(invisible(NULL))

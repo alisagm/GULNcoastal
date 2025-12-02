@@ -475,7 +475,7 @@ run_transect_analysis <- function(data_dir,
     export_all_results(
       data = results$data,
       auc_results = results$auc_results,
-      processed_dir = output_dir,
+      processed_dir = processed_dir,
       output_dir = output_dir,
       date = format(Sys.Date(), "%Y%m%d"),
       verbose = verbose
