@@ -22,6 +22,8 @@
 #' @param data_dir Character. Path to directory containing raw transect CSV
 #'   files. Each CSV must have columns: transect, year, distance, elevation.
 #'   Park is inferred from filename (must contain "GUIS" or "PAIS").
+#' @param processed_dir Character. Path to directory to save intermediate
+#'   result data files. Created if it doesn't exist.
 #' @param output_dir Character. Path to save results. Default is current
 #'   working directory. Created if it doesn't exist.
 #' @param accuracy_table_path Character or NULL. Path to accuracy_values.csv
@@ -97,6 +99,7 @@
 #' @importFrom stats setNames
 #' @export
 run_transect_analysis <- function(data_dir,
+                                  processed_dir = ".",
                                   output_dir = ".",
                                   accuracy_table_path = NULL,
                                   special_cases_path = NULL,
@@ -140,12 +143,6 @@ run_transect_analysis <- function(data_dir,
          "\n  Provide path via accuracy_table_path parameter, or",
          "\n  place accuracy_values.csv in data_dir.",
          call. = FALSE)
-  }
-
-  # Create output directory if needed
-  if (!dir.exists(output_dir)) {
-    dir.create(output_dir, recursive = TRUE)
-    if (verbose) cat("Created output directory:", output_dir, "\n")
   }
 
   # ──────────────────────────────────────────────────────────────────────────
