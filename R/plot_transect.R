@@ -278,7 +278,7 @@ add_auc_inset <- function(p, filtered_data, transect_num, years, auc_results, co
   inset_plot <- inset_plot +
     scale_fill_manual(values = colors) +
     labs(x = "Year", y = expression("Area [m"^2*"]")) +
-    ggplot2::theme_minimal() +
+    theme_minimal() +
     theme(
       axis.text = element_text(size = 8),
       axis.title = element_text(size = 9),
