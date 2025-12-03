@@ -2,7 +2,6 @@
 "_PACKAGE"
 
 ## usethis namespace: start
-#' @importFrom dplyr %>%
 #' @importFrom dplyr bind_rows
 #' @importFrom dplyr distinct
 #' @importFrom ggplot2 ggplot ggsave

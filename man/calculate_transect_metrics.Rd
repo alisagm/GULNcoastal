@@ -37,7 +37,7 @@ The overlap percentage is relative to each year's transect length.
 metrics <- calculate_transect_metrics(cleaned_data)
 
 # Identify transects with low overlap
-low_overlap <- metrics \%>\%
+low_overlap <- metrics |>
   filter(overlap_pct < 50)
 }
 }

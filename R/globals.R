@@ -33,5 +33,8 @@ utils::globalVariables(c(
   "max_dist", "min_dist", "n_years", "year_min",
 
   # Misc
-  "modified", "n_transects", "transects", "line"
+  "modified", "n_transects", "transects", "line",
+
+  # Plotting variables (used in aes() calls)
+  "x", "y", "linetype_category"
 ))

@@ -66,6 +66,7 @@ MODEL_ERROR_RATE <- 0.05
 #' @param slope Absolute value of slope between points (m/m)
 #' @return List with \code{uncertainty} (m) and \code{slope} (m/m)
 #' @keywords internal
+#' @noRd
 calculate_interpolation_uncertainty <- function(sigma_v1, sigma_v2,
                                                 sigma_h1, sigma_h2,
                                                 slope) {
@@ -104,6 +105,7 @@ calculate_interpolation_uncertainty <- function(sigma_v1, sigma_v2,
 #' @param extrap_distance Distance extrapolated beyond last point (meters)
 #' @return List with \code{uncertainty} (m), \code{slope} (m/m), and \code{extrap_distance} (m)
 #' @keywords internal
+#' @noRd
 calculate_extrapolation_uncertainty <- function(sigma_v1, sigma_v2,
                                                 sigma_h1, sigma_h2,
                                                 slope, extrap_distance) {
@@ -149,6 +151,7 @@ calculate_extrapolation_uncertainty <- function(sigma_v1, sigma_v2,
 #' @param extrap_distance Extrapolation distance (meters), NA if not extrapolated - can be vector
 #' @return Character vector: "high", "moderate", or "low"
 #' @keywords internal
+#' @noRd
 assign_confidence <- function(slope, method, extrap_distance = NA) {
 
   # Handle single values or vectors
@@ -219,6 +222,7 @@ assign_confidence <- function(slope, method, extrap_distance = NA) {
 #' @return List with: \code{distance}, \code{uncertainty}, \code{slope},
 #'   \code{extrap_distance}, or NA values if extrapolation invalid
 #' @keywords internal
+#' @noRd
 twoptexpl_with_uncertainty <- function(data, type = "max") {
 
   distance <- data$distance
@@ -325,6 +329,7 @@ twoptexpl_with_uncertainty <- function(data, type = "max") {
 #'   \code{sigma_h}, \code{sigma_v}
 #' @return Data frame with columns: \code{distance}, \code{uncertainty}, \code{slope}
 #' @keywords internal
+#' @noRd
 find_zero_crossings_with_uncertainty <- function(data) {
 
   x <- data$distance
@@ -446,7 +451,7 @@ identify_all_zero_elevation_points <- function(data) {
   # -------------------------------------------------------------------------
 
   # Calculate tier-specific tolerance (1.96 * sigma_v for 95% CI)
-  data <- data %>%
+  data <- data |>
     mutate(zero_tolerance = 1.96 * sigma_v)
 
   measured_zero_idx <- which(abs(elevation) < data$zero_tolerance)
@@ -562,16 +567,16 @@ identify_all_zero_elevation_points <- function(data) {
   # -------------------------------------------------------------------------
 
   if (nrow(zero_points) > 0) {
-    zero_points <- zero_points %>%
-      arrange(distance) %>%
+    zero_points <- zero_points |>
+      arrange(distance) |>
       # Remove duplicates using error-aware tolerance (3 * sigma_h)
       # For consecutive points, use average of their uncertainties
       mutate(
         sigma_h_next = lead(sigma_h, default = last(sigma_h)),
         tolerance = 3 * (sigma_h + sigma_h_next) / 2,
         is_duplicate = c(FALSE, diff(distance) <= tolerance[-n()])
-      ) %>%
-      filter(!is_duplicate) %>%
+      ) |>
+      filter(!is_duplicate) |>
       select(-sigma_h_next, -tolerance, -is_duplicate)
   }
 
@@ -600,12 +605,12 @@ identify_all_zero_elevation_points <- function(data) {
 extract_internal_crossings <- function(zero_points, left_boundary, right_boundary) {
 
   # Use error-aware tolerance: point must be 3*sigma_h away from boundaries
-  internal <- zero_points %>%
+  internal <- zero_points |>
     filter(
       point_type == "interpolated",
       distance > left_boundary + 3 * sigma_h,
       distance < right_boundary - 3 * sigma_h
-    ) %>%
+    ) |>
     pull(distance)
 
   return(internal)
@@ -630,15 +635,15 @@ extract_internal_crossings <- function(zero_points, left_boundary, right_boundar
 identify_zero_points_all_transects <- function(data) {
 
   # Extract metadata before processing
-  metadata <- data %>%
-    select(transect, year, park, cross_island) %>%
+  metadata <- data |>
+    select(transect, year, park, cross_island) |>
     distinct()
 
   # Calculate zero points with uncertainty
   # Use group_split() + lapply() instead of group_modify() to avoid memory accumulation
-  zero_points <- data %>%
-    group_by(transect, year) %>%
-    group_split() %>%
+  zero_points <- data |>
+    group_by(transect, year) |>
+    group_split() |>
     lapply(function(df) {
       # Get group identifiers
       trans <- first(df$transect)
@@ -654,11 +659,11 @@ identify_zero_points_all_transects <- function(data) {
       }
 
       return(result)
-    }) %>%
+    }) |>
     bind_rows()
 
   # Add park and cross_island metadata back
-  zero_points %>%
+  zero_points |>
     left_join(metadata, by = c("transect", "year"))
 }
 
@@ -688,8 +693,8 @@ identify_zero_points_all_transects <- function(data) {
 #' @export
 summarize_zero_crossing_quality <- function(zero_points) {
 
-  summary <- zero_points %>%
-    group_by(park, year, point_type, confidence) %>%
+  summary <- zero_points |>
+    group_by(park, year, point_type, confidence) |>
     summarize(
       n_crossings = n(),
       mean_uncertainty = mean(uncertainty, na.rm = TRUE),
@@ -697,7 +702,7 @@ summarize_zero_crossing_quality <- function(zero_points) {
       max_uncertainty = max(uncertainty, na.rm = TRUE),
       mean_uncertainty_95ci = mean(uncertainty_95ci, na.rm = TRUE),
       .groups = "drop"
-    ) %>%
+    ) |>
     arrange(park, year, point_type)
 
   return(summary)
@@ -716,11 +721,11 @@ summarize_zero_crossing_quality <- function(zero_points) {
 flag_high_uncertainty_crossings <- function(zero_points,
                                             uncertainty_threshold = 2.0) {
 
-  high_uncertainty <- zero_points %>%
-    filter(uncertainty > uncertainty_threshold) %>%
+  high_uncertainty <- zero_points |>
+    filter(uncertainty > uncertainty_threshold) |>
     select(transect, year, park, distance, point_type,
            uncertainty, uncertainty_95ci, confidence,
-           slope, extrap_distance, accuracy_tier) %>%
+           slope, extrap_distance, accuracy_tier) |>
     arrange(desc(uncertainty))
 
   return(high_uncertainty)

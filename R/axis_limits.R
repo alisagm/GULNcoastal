@@ -68,11 +68,10 @@ AXIS_PADDING_FRACTION <- 0.025
 #' }
 #'
 #' @importFrom dplyr filter
-#' @importFrom magrittr %>%
 #' @export
 calculate_axis_limits <- function(data, park = "all") {
   if(park != "all") {
-    filtered_data <- data %>% filter(park == !!park)
+    filtered_data <- data |> filter(park == !!park)
     if(nrow(filtered_data) == 0) {
       filtered_data <- data
     }
@@ -82,11 +81,11 @@ calculate_axis_limits <- function(data, park = "all") {
 
   # Special handling for GUIS: exclude fp09 2018 outlier
   if(park == "GUIS") {
-    filtered_data <- filtered_data %>%
+    filtered_data <- filtered_data |>
       filter(!(transect == "fp09" & year == 2018))
 
     if(nrow(filtered_data) == 0) {
-      filtered_data <- data %>% filter(park == "GUIS")
+      filtered_data <- data |> filter(park == "GUIS")
     }
   }
 
@@ -104,7 +103,7 @@ calculate_axis_limits <- function(data, park = "all") {
 
   # Use PAIS-based buffer for GUIS for consistency
   if(park == "GUIS") {
-    pais_data <- data %>% filter(park == "PAIS")
+    pais_data <- data |> filter(park == "PAIS")
     if(nrow(pais_data) > 0) {
       pais_range <- max(pais_data$elevation, na.rm = TRUE) - min(pais_data$elevation, na.rm = TRUE)
       y_padding <- pais_range * AXIS_PADDING_FRACTION

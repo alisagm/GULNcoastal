@@ -9,18 +9,19 @@ Description: Tools and functions for analyzing coastal monitoring data from
     analysis, and visualization capabilities for coastal ecosystem monitoring.
 License: CC0
 Encoding: UTF-8
-LazyData: true
+Depends:
+    R (>= 4.1.0)
 Imports:
     ggplot2,
     readr,
     dplyr,
     stringr,
     here,
-    magrittr,
     tibble,
     withr,
     viridis,
-    patchwork
+    patchwork,
+    grid
 RoxygenNote: 7.3.3
 Suggests: 
     testthat (>= 3.0.0),

@@ -62,9 +62,9 @@ import_profile_transects <- function(file_path) {
   transect_levels <- stringr::str_sort(unique(df$transect), numeric=TRUE)
 
   # Select only the columns we need and ensure correct types
-  df <- df %>%
+  df <- df |>
     dplyr::select(transect, year, distance, elevation,
-           dplyr::any_of("cross_island")) %>%  # Include cross_island if it exists
+           dplyr::any_of("cross_island")) |>  # Include cross_island if it exists
     dplyr::mutate(
       transect = factor(transect, levels = transect_levels),
       year = as.numeric(year),
@@ -74,9 +74,9 @@ import_profile_transects <- function(file_path) {
 
   # Handle cross_island column: convert "yes" to TRUE, or add FALSE if missing
   if ("cross_island" %in% names(df)) {
-    df <- df %>% dplyr::mutate(cross_island = cross_island == "yes")
+    df <- df |> dplyr::mutate(cross_island = cross_island == "yes")
   } else {
-    df <- df %>% dplyr::mutate(cross_island = FALSE)
+    df <- df |> dplyr::mutate(cross_island = FALSE)
   }
 
   return(df)
@@ -127,7 +127,7 @@ import_transects_park <- function(file_path) {
     TRUE ~ NA_character_
   )
 
-  df %>% dplyr::mutate(park=park_value)
+  df |> dplyr::mutate(park=park_value)
 }
 
 # ============================================================================
