@@ -11,6 +11,8 @@
 #'   element_rect scale_fill_manual scale_y_continuous expansion
 #' @importFrom patchwork inset_element
 #' @importFrom dplyr filter pull mutate arrange first
+#' @importFrom grid unit
+#' @importFrom grDevices rainbow
 
 # ============================================================================
 # CONSTANTS
@@ -70,7 +72,7 @@ add_uncertainty_bands <- function(p, filtered_data, years, colors = NULL, config
     # Multiple years: color-coded uncertainty bands
     for (i in seq_along(years)) {
       yr <- years[i]
-      year_data <- filtered_data %>% filter(year == yr)
+      year_data <- filtered_data |> filter(year == yr)
 
       # Use lighter version of year color for uncertainty
       year_color <- if (!is.null(colors)) colors[as.character(yr)] else uncertainty_color
@@ -104,7 +106,7 @@ add_uncertainty_bands <- function(p, filtered_data, years, colors = NULL, config
 add_shading_layers <- function(p, filtered_data, transect_num, years, auc_results, colors = NULL) {
   if(length(years) == 1) {
     # Single year: shade all segments
-    auc_filtered <- auc_results %>%
+    auc_filtered <- auc_results |>
       filter(transect == transect_num, year == years)
 
     if (nrow(auc_filtered) == 0) {
@@ -112,8 +114,8 @@ add_shading_layers <- function(p, filtered_data, transect_num, years, auc_result
       return(p)
     }
 
-    year_segments <- auc_filtered %>%
-      pull(segments) %>%
+    year_segments <- auc_filtered |>
+      pull(segments) |>
       first()
 
     if (is.null(year_segments)) {
@@ -136,7 +138,7 @@ add_shading_layers <- function(p, filtered_data, transect_num, years, auc_result
     # Multiple years: shade with different colors
     for(i in seq_along(years)) {
       yr <- years[i]
-      auc_filtered <- auc_results %>%
+      auc_filtered <- auc_results |>
         filter(transect == transect_num, year == yr)
 
       if (nrow(auc_filtered) == 0) {
@@ -144,8 +146,8 @@ add_shading_layers <- function(p, filtered_data, transect_num, years, auc_result
         next
       }
 
-      year_segments <- auc_filtered %>%
-        pull(segments) %>%
+      year_segments <- auc_filtered |>
+        pull(segments) |>
         first()
 
       if (is.null(year_segments)) {
@@ -187,7 +189,7 @@ add_shading_layers <- function(p, filtered_data, transect_num, years, auc_result
 add_integration_boundaries <- function(p, transect_num, years, auc_results) {
 
   # Filter AUC results for this transect and years
-  auc_filtered <- auc_results %>%
+  auc_filtered <- auc_results |>
     filter(transect == transect_num, year %in% years)
 
   if (nrow(auc_filtered) == 0 || !"segment_info" %in% names(auc_filtered)) {
@@ -240,8 +242,8 @@ add_integration_boundaries <- function(p, transect_num, years, auc_results) {
 #' @noRd
 add_auc_inset <- function(p, filtered_data, transect_num, years, auc_results, colors,
                           xlim_range, ylim_range, common_min_dist, show_uncertainty = TRUE) {
-  auc_info <- auc_results %>%
-    filter(transect == transect_num, year %in% years) %>%
+  auc_info <- auc_results |>
+    filter(transect == transect_num, year %in% years) |>
     arrange(year)
 
   if(nrow(auc_info) == 0) {
@@ -249,7 +251,7 @@ add_auc_inset <- function(p, filtered_data, transect_num, years, auc_results, co
   }
 
   # Create bar chart data
-  bar_data <- auc_info %>%
+  bar_data <- auc_info |>
     mutate(
       year_factor = as.factor(year),
       auc_clean = ifelse(is.na(auc), 0, auc)
@@ -347,7 +349,7 @@ add_auc_inset <- function(p, filtered_data, transect_num, years, auc_results, co
 #' @noRd
 add_auc_text_annotation <- function(p, filtered_data, transect_num, years, auc_results,
                                     xlim_range, ylim_range, show_uncertainty = TRUE) {
-  auc_info <- auc_results %>%
+  auc_info <- auc_results |>
     filter(transect == transect_num, year %in% years)
 
   if(nrow(auc_info) == 0) {
@@ -464,7 +466,7 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
                                verbose = FALSE) {
 
   # Validate inputs
-  available_transects <- data %>% pull(transect) %>% unique() %>% sort()
+  available_transects <- data |> pull(transect) |> unique() |> sort()
 
   if(is.null(transect_num)) {
     stop(paste("No transect number provided. Available transects:", paste(available_transects, collapse = ", ")))
@@ -476,16 +478,16 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
 
   # Get all years if not specified
   if(is.null(years)) {
-    available_years <- data %>%
-      filter(transect == transect_num) %>%
-      pull(year) %>%
-      unique() %>%
+    available_years <- data |>
+      filter(transect == transect_num) |>
+      pull(year) |>
+      unique() |>
       sort()
     years <- available_years
   }
 
   # Filter data
-  filtered_data <- data %>%
+  filtered_data <- data |>
     filter(transect == transect_num, year %in% years)
 
   if(nrow(filtered_data) == 0) {
@@ -493,12 +495,12 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
   }
 
   # Get metadata
-  park_name <- filtered_data %>% pull(park) %>% first()
+  park_name <- filtered_data |> pull(park) |> first()
 
   # Extract common_min distance from point_type column
-  common_min_dist <- filtered_data %>%
-    filter(transect == transect_num, point_type == "common_min") %>%
-    pull(distance) %>%
+  common_min_dist <- filtered_data |>
+    filter(transect == transect_num, point_type == "common_min") |>
+    pull(distance) |>
     first()
   if(length(common_min_dist) == 0 || is.na(common_min_dist)) {
     common_min_dist <- NA
@@ -506,8 +508,8 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
 
   # Track legend state for unified legend configuration
   has_common_min <- !is.na(common_min_dist)
-  has_interp <- nrow(filtered_data %>% filter(point_type == "interpolated")) > 0
-  has_extrap <- nrow(filtered_data %>% filter(point_type == "extrapolated")) > 0
+  has_interp <- nrow(filtered_data |> filter(point_type == "interpolated")) > 0
+  has_extrap <- nrow(filtered_data |> filter(point_type == "extrapolated")) > 0
   is_multiyear <- length(years) > 1
 
   # Create title
@@ -600,7 +602,7 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
     # Multi-year: inherit color from aes(color = year)
     p <- p +
       geom_point(
-        data = filtered_data %>% filter(point_type %in% c("measured", "common_min", "measured_zero")),
+        data = filtered_data |> filter(point_type %in% c("measured", "common_min", "measured_zero")),
         alpha = 0.7,
         size = 1.2,
         shape = 16,
@@ -611,7 +613,7 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
     year_color <- colors[as.character(years)]
     p <- p +
       geom_point(
-        data = filtered_data %>% filter(point_type %in% c("measured", "common_min", "measured_zero")),
+        data = filtered_data |> filter(point_type %in% c("measured", "common_min", "measured_zero")),
         alpha = 0.6,
         size = 1.5,
         shape = 16,
@@ -624,7 +626,7 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
   if(has_interp) {
     p <- p +
       geom_point(
-        data = filtered_data %>% filter(point_type == "interpolated"),
+        data = filtered_data |> filter(point_type == "interpolated"),
         aes(shape = "Interpolated"),
         alpha = if(is_multiyear) 0.7 else 0.6,
         size = if(is_multiyear) 1.2 else 1.5,
@@ -637,7 +639,7 @@ plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_resu
   if(has_extrap) {
     p <- p +
       geom_point(
-        data = filtered_data %>% filter(point_type == "extrapolated"),
+        data = filtered_data |> filter(point_type == "extrapolated"),
         aes(shape = "Extrapolated"),
         alpha = if(is_multiyear) 0.7 else 0.6,
         size = if(is_multiyear) 1.2 else 1.5,
@@ -858,12 +860,12 @@ plot_transect_profiles <- function(data, auc_results, config) {
          call. = FALSE)
   }
 
-  years <- unique(data$year) %>% sort()
+  years <- unique(data$year) |> sort()
   if (length(years) == 0) {
     stop("No years found in data for transect ", transect_id, call. = FALSE)
   }
 
-  park <- unique(data$park) %>% first()
+  park <- unique(data$park) |> first()
   if (is.na(park) || is.null(park)) {
     stop("No valid park found in data for transect ", transect_id, call. = FALSE)
   }

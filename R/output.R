@@ -214,8 +214,8 @@ export_transect_profiles_csv <- function(data, park,
 
   # Filter and select columns for this park
   # Include all error propagation and uncertainty columns
-  park_data <- data %>%
-    dplyr::filter(park == !!park) %>%
+  park_data <- data |>
+    dplyr::filter(park == !!park) |>
     dplyr::select(
       transect, year, distance, elevation, point_type, cross_island,
       # Measurement accuracy columns
@@ -224,8 +224,8 @@ export_transect_profiles_csv <- function(data, park,
       uncertainty, confidence, uncertainty_95ci,
       # Slope/extrapolation columns (NA for measured points)
       slope, extrap_distance
-    ) %>%
-    dplyr::arrange(transect, year, distance) %>%
+    ) |>
+    dplyr::arrange(transect, year, distance) |>
     # Apply error-aware rounding for CSV export
     dplyr::mutate(
       # Round distance to horizontal uncertainty precision
@@ -323,15 +323,15 @@ export_auc_csv <- function(auc_results, data, park,
   filepath <- file.path(park_dir, filename)
 
   # Get park assignment for each transect
-  transect_park <- data %>%
-    dplyr::select(transect, park) %>%
+  transect_park <- data |>
+    dplyr::select(transect, park) |>
     dplyr::distinct()
 
   # Filter and select columns for this park
   # Include all AUC metrics with uncertainty bounds
-  park_auc <- auc_results %>%
-    dplyr::left_join(transect_park, by = "transect") %>%
-    dplyr::filter(park == !!park) %>%
+  park_auc <- auc_results |>
+    dplyr::left_join(transect_park, by = "transect") |>
+    dplyr::filter(park == !!park) |>
     dplyr::select(
       transect, year,
       transect_length, overlap_m, overlap_pct,
@@ -339,8 +339,8 @@ export_auc_csv <- function(auc_results, data, park,
       auc, auc_upper, auc_lower, auc_sigma, auc_uncertainty_pct,
       # Segment information
       n_segments
-    ) %>%
-    dplyr::arrange(transect, year) %>%
+    ) |>
+    dplyr::arrange(transect, year) |>
     # Apply error-aware rounding for CSV export
     dplyr::mutate(
       # Round transect metrics to cm precision (0.01m)
@@ -606,7 +606,7 @@ list_topo_transect_files <- function(input_dir = input_dir) {
     path = rds_files,
     size_mb = round(file_info$size / 1024^2, 2),
     modified = file_info$mtime
-  ) %>%
+  ) |>
     dplyr::arrange(dplyr::desc(modified))
 
   return(results)

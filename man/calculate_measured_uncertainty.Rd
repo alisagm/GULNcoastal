@@ -46,9 +46,9 @@ calculated within each individual profile.
 \dontrun{
 library(dplyr)
 # Apply to grouped data
-data_with_uncertainty <- profile_data \%>\%
-  group_by(transect, year) \%>\%
-  group_modify(~calculate_measured_uncertainty(.x)) \%>\%
+data_with_uncertainty <- profile_data |>
+  group_by(transect, year) |>
+  group_modify(~calculate_measured_uncertainty(.x)) |>
   ungroup()
 }
 

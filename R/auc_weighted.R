@@ -61,7 +61,7 @@ calculate_weighted_elevations <- function(data) {
     stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
   }
 
-  data %>%
+  data |>
     mutate(
       # Nominal (weighted) elevation
       elev_weighted = case_when(
@@ -139,10 +139,10 @@ identify_positive_segments_weighted <- function(data) {
   }
 
   # Ensure sorted by distance
-  data <- data %>% arrange(distance)
+  data <- data |> arrange(distance)
 
   # Mark transitions between positive and negative regions
-  data <- data %>%
+  data <- data |>
     mutate(
       above_zero = elev_weighted >= 0,
       segment_change = above_zero != lag(above_zero, default = !first(above_zero))
@@ -163,9 +163,9 @@ identify_positive_segments_weighted <- function(data) {
   }
 
   # Summarize segment boundaries
-  segments <- data %>%
-    filter(!is.na(segment)) %>%
-    group_by(segment) %>%
+  segments <- data |>
+    filter(!is.na(segment)) |>
+    group_by(segment) |>
     summarize(
       distance_min = min(distance),
       distance_max = max(distance),
@@ -210,7 +210,7 @@ identify_positive_segments_weighted <- function(data) {
 calculate_trapezoidal_auc <- function(data, elev_col = "elev_weighted") {
 
   # Ensure sorted by distance
-  data <- data %>% arrange(distance)
+  data <- data |> arrange(distance)
 
   # Extract vectors
   x <- data$distance
@@ -311,7 +311,7 @@ calculate_auc_with_uncertainty <- function(data) {
   # Step 3: Calculate AUC for each segment (nominal, upper, lower)
   segment_results <- lapply(seq_len(nrow(segment_boundaries)), function(i) {
     seg_id <- segment_boundaries$segment[i]
-    seg_data <- data %>% filter(segment == seg_id)
+    seg_data <- data |> filter(segment == seg_id)
 
     tibble(
       segment = seg_id,
@@ -322,17 +322,17 @@ calculate_auc_with_uncertainty <- function(data) {
       auc_upper = calculate_trapezoidal_auc(seg_data, "elev_upper"),
       auc_lower = calculate_trapezoidal_auc(seg_data, "elev_lower")
     )
-  }) %>% bind_rows()
+  }) |> bind_rows()
 
   # Step 4: Sum across segments
-  total_auc <- segment_results %>%
+  total_auc <- segment_results |>
     summarize(
       auc_nominal = sum(auc_nominal, na.rm = TRUE),
       auc_upper = sum(auc_upper, na.rm = TRUE),
       auc_lower = sum(auc_lower, na.rm = TRUE),
       n_segments = n(),
       segment_info = list(segment_results)
-    ) %>%
+    ) |>
     mutate(
       # Calculate uncertainty metrics
       auc_uncertainty = (auc_upper - auc_lower) / 2,
@@ -397,8 +397,8 @@ generate_plotting_segments <- function(data) {
 
   # Step 3: Create segment groups (both positive and negative)
   # Need to group ALL points into segments, not just positive ones
-  data <- data %>%
-    arrange(distance) %>%
+  data <- data |>
+    arrange(distance) |>
     mutate(
       # Create segment ID for ALL regions (positive and negative)
       segment_group = cumsum(segment_change)
@@ -407,8 +407,8 @@ generate_plotting_segments <- function(data) {
   # Step 4: Convert to plotting format
   # For each segment_group, create list(is_positive, x, y)
   # Use ORIGINAL elevation, not weighted
-  segments_summary <- data %>%
-    group_by(segment_group) %>%
+  segments_summary <- data |>
+    group_by(segment_group) |>
     summarise(
       is_positive = first(above_zero),
       distance = list(distance),
@@ -454,15 +454,15 @@ generate_plotting_segments <- function(data) {
 #' @export
 calculate_auc_weighted_all <- function(data) {
   # Use group_split() + lapply() instead of group_modify() to avoid memory accumulation
-  data %>%
-    group_by(transect, year) %>%
-    group_split() %>%
+  data |>
+    group_by(transect, year) |>
+    group_split() |>
     lapply(function(df) {
       result <- calculate_auc_with_uncertainty(df)
       result$transect <- first(df$transect)
       result$year <- first(df$year)
       return(result)
-    }) %>%
+    }) |>
     bind_rows()
 }
 
@@ -513,7 +513,7 @@ get_segment_details <- function(data) {
   # Use explicit lapply() instead of rowwise() to avoid memory accumulation
   lapply(seq_len(nrow(segment_boundaries)), function(i) {
     seg_id <- segment_boundaries$segment[i]
-    seg_data <- data %>% filter(segment == seg_id)
+    seg_data <- data |> filter(segment == seg_id)
 
     tibble(
       segment = seg_id,
@@ -524,5 +524,5 @@ get_segment_details <- function(data) {
       auc_upper = calculate_trapezoidal_auc(seg_data, "elev_upper"),
       auc_lower = calculate_trapezoidal_auc(seg_data, "elev_lower")
     )
-  }) %>% bind_rows()
+  }) |> bind_rows()
 }

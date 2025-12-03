@@ -121,15 +121,15 @@ validate_accuracy_table <- function(accuracy_table) {
   }
 
   # Check for duplicate park/year combinations
-  duplicates <- accuracy_table %>%
-    dplyr::group_by(park, year) %>%
-    dplyr::filter(dplyr::n() > 1) %>%
+  duplicates <- accuracy_table |>
+    dplyr::group_by(park, year) |>
+    dplyr::filter(dplyr::n() > 1) |>
     dplyr::ungroup()
 
   if (nrow(duplicates) > 0) {
-    dup_summary <- duplicates %>%
-      dplyr::distinct(park, year) %>%
-      dplyr::mutate(label = paste0(park, "/", year)) %>%
+    dup_summary <- duplicates |>
+      dplyr::distinct(park, year) |>
+      dplyr::mutate(label = paste0(park, "/", year)) |>
       dplyr::pull(label)
     stop("Accuracy table contains duplicate park/year combinations: ",
          paste(dup_summary, collapse = ", "))
@@ -251,15 +251,15 @@ validate_special_cases_table <- function(special_cases) {
   }
 
   # Check for duplicate park/year/transect combinations
-  duplicates <- special_cases %>%
-    dplyr::group_by(park, year, transect) %>%
-    dplyr::filter(dplyr::n() > 1) %>%
+  duplicates <- special_cases |>
+    dplyr::group_by(park, year, transect) |>
+    dplyr::filter(dplyr::n() > 1) |>
     dplyr::ungroup()
 
   if (nrow(duplicates) > 0) {
-    dup_summary <- duplicates %>%
-      dplyr::distinct(park, year, transect) %>%
-      dplyr::mutate(label = paste0(park, "/", year, "/", transect)) %>%
+    dup_summary <- duplicates |>
+      dplyr::distinct(park, year, transect) |>
+      dplyr::mutate(label = paste0(park, "/", year, "/", transect)) |>
       dplyr::pull(label)
     stop("Special cases table contains duplicate park/year/transect combinations: ",
          paste(dup_summary, collapse = ", "))
@@ -348,7 +348,6 @@ validate_special_cases_table <- function(special_cases) {
 #'
 #' @importFrom dplyr left_join mutate case_when if_else coalesce
 #' @importFrom dplyr group_by summarize arrange filter n select
-#' @importFrom magrittr %>%
 #' @export
 assign_accuracy <- function(
     df,
@@ -381,7 +380,7 @@ assign_accuracy <- function(
     message("  Default tier: ", default_accuracy$accuracy_tier)
     message("To use project-specific values, provide an accuracy_table argument.")
 
-    df_with_accuracy <- df %>%
+    df_with_accuracy <- df |>
       dplyr::mutate(
         sigma_h = default_accuracy$sigma_h,
         sigma_v = default_accuracy$sigma_v,
@@ -426,11 +425,11 @@ assign_accuracy <- function(
   }
 
   # Check for park/year combinations in data not in accuracy table
-  data_combinations <- df %>%
-    dplyr::distinct(park, year) %>%
+  data_combinations <- df |>
+    dplyr::distinct(park, year) |>
     dplyr::filter(!is.na(park), !is.na(year))
 
-  table_combinations <- accuracy_table %>%
+  table_combinations <- accuracy_table |>
     dplyr::distinct(park, year)
 
   missing_combinations <- dplyr::anti_join(
@@ -440,8 +439,8 @@ assign_accuracy <- function(
   )
 
   if (nrow(missing_combinations) > 0) {
-    combo_labels <- missing_combinations %>%
-      dplyr::mutate(label = paste0(park, "/", year)) %>%
+    combo_labels <- missing_combinations |>
+      dplyr::mutate(label = paste0(park, "/", year)) |>
       dplyr::pull(label)
     warning("Park/year combinations in data not found in accuracy table: ",
             paste(combo_labels, collapse = ", "),
@@ -452,7 +451,7 @@ assign_accuracy <- function(
   # Join accuracy values from main table
   # ---------------------------------------------------------------------------
 
-  df_with_accuracy <- df %>%
+  df_with_accuracy <- df |>
     dplyr::left_join(
       accuracy_table,
       by = c("park", "year")
@@ -473,7 +472,7 @@ assign_accuracy <- function(
   # Apply defaults for missing values
   # ---------------------------------------------------------------------------
 
-  df_with_accuracy <- df_with_accuracy %>%
+  df_with_accuracy <- df_with_accuracy |>
     dplyr::mutate(
       sigma_h = dplyr::if_else(is.na(sigma_h), default_accuracy$sigma_h, sigma_h),
       sigma_v = dplyr::if_else(is.na(sigma_v), default_accuracy$sigma_v, sigma_v),
@@ -508,10 +507,10 @@ check_special_case_overrides <- function(df, accuracy_table, special_cases, verb
 
 
   # Find park/year combinations that exist in BOTH tables
-  accuracy_park_years <- accuracy_table %>%
+  accuracy_park_years <- accuracy_table |>
     dplyr::distinct(park, year)
 
-  special_park_years <- special_cases %>%
+  special_park_years <- special_cases |>
     dplyr::distinct(park, year)
 
   overlapping <- dplyr::inner_join(
@@ -523,30 +522,30 @@ check_special_case_overrides <- function(df, accuracy_table, special_cases, verb
 
   if (nrow(overlapping) > 0) {
     # Get the specific transects being overridden
-    overridden_transects <- special_cases %>%
-      dplyr::semi_join(overlapping, by = c("park", "year")) %>%
+    overridden_transects <- special_cases |>
+      dplyr::semi_join(overlapping, by = c("park", "year")) |>
       dplyr::distinct(park, year, transect)
 
     # Check how many of these transects are actually in the data
-    transects_in_data <- df %>%
-      dplyr::semi_join(overridden_transects, by = c("park", "year", "transect")) %>%
+    transects_in_data <- df |>
+      dplyr::semi_join(overridden_transects, by = c("park", "year", "transect")) |>
       dplyr::distinct(park, year, transect)
 
     if (nrow(transects_in_data) > 0) {
       # Build informative message
-      override_summary <- transects_in_data %>%
-        dplyr::group_by(park, year) %>%
+      override_summary <- transects_in_data |>
+        dplyr::group_by(park, year) |>
         dplyr::summarize(
           n_transects = dplyr::n(),
           transects = paste(transect, collapse = ", "),
           .groups = "drop"
         )
 
-      warning_lines <- override_summary %>%
+      warning_lines <- override_summary |>
         dplyr::mutate(
           line = paste0("  ", park, "/", year, ": ", n_transects,
                         " transect(s) [", transects, "]")
-        ) %>%
+        ) |>
         dplyr::pull(line)
 
       message("Note: special_cases overriding accuracy_table for:\n",
@@ -577,7 +576,7 @@ apply_special_cases <- function(df, special_cases) {
   }
 
   # Rename special_cases columns to avoid conflicts during join
-  special_cases_renamed <- special_cases %>%
+  special_cases_renamed <- special_cases |>
     dplyr::rename(
       sigma_h_special = sigma_h,
       sigma_v_special = sigma_v,
@@ -594,9 +593,9 @@ apply_special_cases <- function(df, special_cases) {
 
     if (length(unknown_transects) > 0) {
       # Get details about which park/year/transect combos won't match
-      unmatched_entries <- special_cases_renamed %>%
-        dplyr::filter(transect %in% unknown_transects) %>%
-        dplyr::mutate(label = paste0(park, "/", year, "/", transect)) %>%
+      unmatched_entries <- special_cases_renamed |>
+        dplyr::filter(transect %in% unknown_transects) |>
+        dplyr::mutate(label = paste0(park, "/", year, "/", transect)) |>
         dplyr::pull(label)
 
       warning("Special cases contain transect IDs not found in main data:\n  ",
@@ -606,26 +605,26 @@ apply_special_cases <- function(df, special_cases) {
               call. = FALSE)
     }
 
-    special_cases_renamed <- special_cases_renamed %>%
+    special_cases_renamed <- special_cases_renamed |>
       dplyr::mutate(transect = factor(transect, levels = transect_levels))
   }
 
   # Join and coalesce (special case values take precedence)
-  result <- df %>%
+  result <- df |>
     dplyr::left_join(
       special_cases_renamed,
       by = c("park", "year", "transect")
-    ) %>%
+    ) |>
     dplyr::mutate(
       sigma_h = dplyr::coalesce(sigma_h_special, sigma_h),
       sigma_v = dplyr::coalesce(sigma_v_special, sigma_v),
       accuracy_tier = dplyr::coalesce(accuracy_tier_special, accuracy_tier)
-    ) %>%
+    ) |>
     dplyr::select(-sigma_h_special, -sigma_v_special, -accuracy_tier_special)
 
   # Defensive: restore factor if join still coerced to character
   if (transect_is_factor && !is.factor(result$transect)) {
-    result <- result %>%
+    result <- result |>
       dplyr::mutate(transect = factor(transect, levels = transect_levels))
   }
 
@@ -644,24 +643,24 @@ apply_special_cases <- function(df, special_cases) {
 print_accuracy_summary <- function(df, default_accuracy) {
   cat("\n=== Accuracy Assignment Summary ===\n")
 
-  summary_table <- df %>%
-    dplyr::group_by(park, year, accuracy_tier) %>%
+  summary_table <- df |>
+    dplyr::group_by(park, year, accuracy_tier) |>
     dplyr::summarize(
       n_points = dplyr::n(),
       sigma_h_mean = mean(sigma_h, na.rm = TRUE),
       sigma_v_mean = mean(sigma_v, na.rm = TRUE),
       .groups = "drop"
-    ) %>%
+    ) |>
     dplyr::arrange(park, year)
 
   print(summary_table, n = Inf)
 
   # Check for defaults applied
-  n_default <- df %>%
+  n_default <- df |>
     dplyr::filter(
       sigma_h == default_accuracy$sigma_h &
         sigma_v == default_accuracy$sigma_v
-    ) %>%
+    ) |>
     nrow()
 
   if (n_default > 0) {
@@ -715,9 +714,9 @@ print_accuracy_summary <- function(df, default_accuracy) {
 #' \dontrun{
 #' library(dplyr)
 #' # Apply to grouped data
-#' data_with_uncertainty <- profile_data %>%
-#'   group_by(transect, year) %>%
-#'   group_modify(~calculate_measured_uncertainty(.x)) %>%
+#' data_with_uncertainty <- profile_data |>
+#'   group_by(transect, year) |>
+#'   group_modify(~calculate_measured_uncertainty(.x)) |>
 #'   ungroup()
 #' }
 #'
@@ -726,7 +725,7 @@ print_accuracy_summary <- function(df, default_accuracy) {
 calculate_measured_uncertainty <- function(data) {
 
   # Ensure data is sorted by distance
-  data <- data %>% dplyr::arrange(distance)
+  data <- data |> dplyr::arrange(distance)
 
   n <- nrow(data)
 
@@ -773,7 +772,7 @@ calculate_measured_uncertainty <- function(data) {
   )
 
   # Add calculated values to data
-  data <- data %>%
+  data <- data |>
     dplyr::mutate(
       slope = slopes,
       uncertainty = uncertainty_total,
@@ -809,18 +808,17 @@ calculate_measured_uncertainty <- function(data) {
 #' }
 #'
 #' @importFrom dplyr group_by group_modify ungroup mutate if_else select
-#' @importFrom magrittr %>%
 #' @export
 add_measured_uncertainty <- function(data_accuracy) {
 
   # Calculate uncertainty with proper slope propagation
-  data_with_uncertainty <- data_accuracy %>%
-    dplyr::group_by(transect, year, park, cross_island) %>%
-    dplyr::group_modify(~calculate_measured_uncertainty(.x)) %>%
+  data_with_uncertainty <- data_accuracy |>
+    dplyr::group_by(transect, year, park, cross_island) |>
+    dplyr::group_modify(~calculate_measured_uncertainty(.x)) |>
     dplyr::ungroup()
 
   # Classify measured zero-crossings and add metadata
-  data_classified <- data_with_uncertainty %>%
+  data_classified <- data_with_uncertainty |>
     dplyr::mutate(
       # Determine if point is within zero tolerance (using sigma_v, NOT uncertainty)
       # This is correct: we only care about vertical uncertainty for zero-crossing
@@ -832,7 +830,7 @@ add_measured_uncertainty <- function(data_accuracy) {
 
       # Initialize columns for derived points (will be populated later)
       extrap_distance = NA_real_
-    ) %>%
+    ) |>
     dplyr::select(-is_measured_zero)
 
   return(data_classified)
@@ -935,11 +933,10 @@ validate_accuracy_assignment <- function(df) {
 #' }
 #'
 #' @importFrom dplyr group_by summarize arrange n
-#' @importFrom magrittr %>%
 #' @export
 summarize_accuracy_by_year <- function(df) {
-  df %>%
-    dplyr::group_by(park, year, accuracy_tier) %>%
+  df |>
+    dplyr::group_by(park, year, accuracy_tier) |>
     dplyr::summarize(
       n_observations = dplyr::n(),
       sigma_v_mean = mean(sigma_v, na.rm = TRUE),
@@ -949,6 +946,6 @@ summarize_accuracy_by_year <- function(df) {
       sigma_h_min = min(sigma_h, na.rm = TRUE),
       sigma_h_max = max(sigma_h, na.rm = TRUE),
       .groups = "drop"
-    ) %>%
+    ) |>
     dplyr::arrange(park, year)
 }

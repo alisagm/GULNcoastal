@@ -66,7 +66,6 @@ YEAR_CADENCE <- 2
 #' }
 #'
 #' @importFrom dplyr filter pull
-#' @importFrom magrittr %>%
 #' @export
 get_color_palette <- function(data, palette = "viridis") {
   # Validate palette choice
@@ -96,9 +95,9 @@ get_color_palette <- function(data, palette = "viridis") {
 
   # If no park column, create palette for all years
   if (!"park" %in% names(data)) {
-    all_years <- data %>%
-      pull(year) %>%
-      unique() %>%
+    all_years <- data |>
+      pull(year) |>
+      unique() |>
       sort()
 
     n_years <- length(all_years)
@@ -113,10 +112,10 @@ get_color_palette <- function(data, palette = "viridis") {
   all_colors <- character()
 
   for (park_name in parks_in_data) {
-    park_years <- data %>%
-      filter(park == park_name) %>%
-      pull(year) %>%
-      unique() %>%
+    park_years <- data |>
+      filter(park == park_name) |>
+      pull(year) |>
+      unique() |>
       sort()
 
     if (length(park_years) == 0) next

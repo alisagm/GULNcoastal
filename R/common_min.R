@@ -110,15 +110,15 @@ calculate_and_interpolate_common_min <- function(data, verbose = FALSE) {
     n_na <- sum(is.na(data$cross_island))
     warning(sprintf("Found %d rows with NA in cross_island column. These will be excluded.", n_na),
             call. = FALSE)
-    data <- data %>% filter(!is.na(cross_island))
+    data <- data |> filter(!is.na(cross_island))
   }
 
   # Step 1: Calculate common minimum distance for each transect
-  common_mins <- data %>%
-    filter(cross_island == FALSE) %>%
-    group_by(transect, year) %>%
-    summarise(year_min = min(distance), .groups = 'drop') %>%
-    group_by(transect) %>%
+  common_mins <- data |>
+    filter(cross_island == FALSE) |>
+    group_by(transect, year) |>
+    summarise(year_min = min(distance), .groups = 'drop') |>
+    group_by(transect) |>
     summarise(common_min_distance = max(year_min), .groups = 'drop')
 
   # Check if we have any transects to process
@@ -129,11 +129,11 @@ calculate_and_interpolate_common_min <- function(data, verbose = FALSE) {
 
   # Step 2: For each transect-year, generate the common_min point with accuracy
   # Use group_split() + lapply() instead of group_modify() to avoid memory accumulation
-  result <- data %>%
-    filter(cross_island == FALSE) %>%
-    inner_join(common_mins, by = "transect") %>%
-    group_by(transect, year) %>%
-    group_split() %>%
+  result <- data |>
+    filter(cross_island == FALSE) |>
+    inner_join(common_mins, by = "transect") |>
+    group_by(transect, year) |>
+    group_split() |>
     lapply(function(df) {
 
       # Safety check: ensure df is not empty
@@ -313,7 +313,7 @@ calculate_and_interpolate_common_min <- function(data, verbose = FALSE) {
           slope = slope
         )
       }
-    }) %>%
+    }) |>
     bind_rows()
 
   return(result)
@@ -350,14 +350,14 @@ calculate_and_interpolate_common_min <- function(data, verbose = FALSE) {
 #' metrics <- calculate_transect_metrics(cleaned_data)
 #'
 #' # Identify transects with low overlap
-#' low_overlap <- metrics %>%
+#' low_overlap <- metrics |>
 #'   filter(overlap_pct < 50)
 #' }
 calculate_transect_metrics <- function(data) {
 
   # Step 1: Calculate transect length for each transect-year
-  transect_lengths <- data %>%
-    group_by(transect, year) %>%
+  transect_lengths <- data |>
+    group_by(transect, year) |>
     summarise(
       min_dist = min(distance, na.rm = TRUE),
       max_dist = max(distance, na.rm = TRUE),
@@ -366,14 +366,14 @@ calculate_transect_metrics <- function(data) {
     )
 
   # Step 2: Calculate overlap metrics
-  overlap_metrics <- transect_lengths %>%
-    group_by(transect) %>%
+  overlap_metrics <- transect_lengths |>
+    group_by(transect) |>
     summarise(
       n_years = n(),
       overlap_start = max(min_dist, na.rm = TRUE),  # Rightmost starting point
       overlap_end = min(max_dist, na.rm = TRUE),    # Leftmost ending point
       .groups = 'drop'
-    ) %>%
+    ) |>
     mutate(
       # Calculate overlap length (0 if negative or only one year)
       overlap_m = if_else(
@@ -381,12 +381,12 @@ calculate_transect_metrics <- function(data) {
         0,
         pmax(overlap_end - overlap_start, 0)
       )
-    ) %>%
+    ) |>
     select(transect, overlap_m)
 
   # Step 3: Join transect lengths with overlap metrics
-  transect_lengths %>%
-    left_join(overlap_metrics, by = "transect") %>%
+  transect_lengths |>
+    left_join(overlap_metrics, by = "transect") |>
     mutate(
       # Calculate overlap percentage
       overlap_pct = if_else(
@@ -394,6 +394,6 @@ calculate_transect_metrics <- function(data) {
         (overlap_m / transect_length) * 100,
         0
       )
-    ) %>%
+    ) |>
     select(transect, year, overlap_m, overlap_pct, transect_length)
 }
