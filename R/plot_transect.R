@@ -7,8 +7,8 @@
 
 #' @importFrom ggplot2 ggplot aes geom_path geom_point geom_area geom_ribbon
 #'   geom_vline geom_errorbar geom_bar geom_label annotate
-#'   labs xlab ylab ylim xlim theme element_text element_rect scale_fill_manual
-#'   scale_y_continuous expansion
+#'   labs xlab ylab ylim xlim theme theme_minimal element_blank element_text
+#'   element_rect scale_fill_manual scale_y_continuous expansion
 #' @importFrom patchwork inset_element
 #' @importFrom dplyr filter pull mutate arrange first
 
