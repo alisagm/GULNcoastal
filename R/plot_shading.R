@@ -1,4 +1,4 @@
-# R/plot_shading.R
+# plot_shading.R
 # Functions for creating shaded area visualization data
 
 # ============================================================================

@@ -1,4 +1,4 @@
-# colors.R
+# plot_colors.R
 # Color palette and formatting functions for beach profile plots
 
 # ============================================================================

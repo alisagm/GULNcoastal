@@ -1,3 +1,4 @@
+# data_filter.R
 # Data filter class for intuitive, semantic data selection
 #
 # Separates data selection concerns from visualization settings.

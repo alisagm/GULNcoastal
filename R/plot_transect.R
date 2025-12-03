@@ -1,4 +1,4 @@
-# R/plot_transect.R
+# plot_transect.R
 # Core transect plotting engine
 #
 # This module provides the primary plotting interface for beach profile transects.

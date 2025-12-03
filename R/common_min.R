@@ -1,3 +1,4 @@
+#' common_min.R
 #' Common Minimum Distance Calculations for Beach Transects
 #'
 #' Functions for calculating common minimum distance points across transects.

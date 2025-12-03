@@ -1,4 +1,4 @@
-# R/plot_positioning.R
+# plot_positioning.R
 # Functions for positioning labels and insets on plots
 
 # ============================================================================

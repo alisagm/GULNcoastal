@@ -1,4 +1,4 @@
-# R/plot_legend.R
+# plot_legend.R
 # Consolidated legend configuration for transect profile plots
 #
 # This module provides unified legend management to ensure all legend

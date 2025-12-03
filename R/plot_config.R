@@ -1,4 +1,4 @@
-# GULNcoastalv2/GULNcoastal/R/plot_config.R
+# plot_config.R
 # Plot configuration management for flexible and reusable plotting settings
 
 # ============================================================================

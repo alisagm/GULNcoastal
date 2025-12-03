@@ -1,4 +1,4 @@
-# GULNcoastalv2/GULNcoastal/R/plot_config_presets.R
+# plot_config_presets.R
 # Preset configurations for common plotting scenarios
 
 # ============================================================================

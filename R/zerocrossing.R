@@ -1,3 +1,4 @@
+# zerocrossing.R
 #' Zero-Elevation Point Identification for Beach Profiles
 #'
 #' Accuracy-aware zero-elevation point identification for beach profile transects.

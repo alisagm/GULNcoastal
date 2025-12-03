@@ -1,4 +1,4 @@
-# R/globals.R
+# globals.R
 # Column name declarations for R CMD check
 # These are used in dplyr/tidyr NSE expressions throughout the package
 

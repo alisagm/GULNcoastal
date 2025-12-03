@@ -1,4 +1,4 @@
-# R/plot_batch.R
+# plot_batch.R
 # Batch plotting utilities for saving and managing plot outputs
 #
 # This module provides helper functions for batch plot operations.

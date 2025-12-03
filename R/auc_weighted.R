@@ -1,3 +1,4 @@
+# auc_weighted.R
 # Probability-weighted AUC calculation with uncertainty propagation
 #
 # This module implements probability-weighted Area Under Curve (AUC) calculations
