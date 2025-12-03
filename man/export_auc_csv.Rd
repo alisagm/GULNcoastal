@@ -8,7 +8,7 @@ export_auc_csv(
   auc_results,
   data,
   park,
-  output_dir = getwd(),
+  output_dir = output_dir,
   date = format(Sys.Date(), "\%Y\%m\%d"),
   verbose = TRUE
 )

@@ -8,7 +8,7 @@ export_park_files(
   data,
   auc_results,
   park,
-  output_dir = getwd(),
+  output_dir = output_dir,
   date = format(Sys.Date(), "\%Y\%m\%d"),
   verbose = TRUE
 )

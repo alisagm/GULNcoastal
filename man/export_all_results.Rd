@@ -7,8 +7,8 @@
 export_all_results(
   data,
   auc_results,
-  processed_dir = getwd(),
-  output_dir = getwd(),
+  processed_dir = processed_dir,
+  output_dir = output_dir,
   date = format(Sys.Date(), "\%Y\%m\%d"),
   verbose = TRUE
 )

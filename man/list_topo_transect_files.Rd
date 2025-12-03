@@ -4,11 +4,10 @@
 \alias{list_topo_transect_files}
 \title{List Available Topo Transect Result Files}
 \usage{
-list_topo_transect_files(input_dir = getwd())
+list_topo_transect_files(input_dir = input_dir)
 }
 \arguments{
-\item{input_dir}{Character. Directory to search. Default: current
-working directory}
+\item{input_dir}{Character. Directory to search.}
 }
 \value{
 Data frame with file information (filename, path, size_mb, modified),

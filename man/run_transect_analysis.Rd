@@ -6,6 +6,7 @@
 \usage{
 run_transect_analysis(
   data_dir,
+  processed_dir = ".",
   output_dir = ".",
   accuracy_table_path = NULL,
   special_cases_path = NULL,
@@ -18,8 +19,11 @@ run_transect_analysis(
 files. Each CSV must have columns: transect, year, distance, elevation.
 Park is inferred from filename (must contain "GUIS" or "PAIS").}
 
+\item{processed_dir}{Character. Path to directory to save intermediate
+result data files. Created if it doesn't exist.}
+
 \item{output_dir}{Character. Path to save results. Default is current
-working directory. Created if it doesn}
+working directory. Created if it doesn't exist.}
 
 \item{accuracy_table_path}{Character or NULL. Path to accuracy_values.csv
 file containing measurement uncertainty by park/year. If NULL (default),
@@ -29,7 +33,8 @@ looks for "accuracy_values.csv" in \code{data_dir}.}
 file containing transect-specific accuracy overrides. If NULL (default),
 looks for "special_cases.csv" in \code{data_dir}. This file is optional.}
 
-\item{save_results}{Logical. If TRUE (default), saves results using}
+\item{save_results}{Logical. If TRUE (default), saves results using
+\code{export_all_results()}.}
 
 \item{verbose}{Logical. If TRUE, prints progress messages. Default FALSE.}
 }

@@ -3,7 +3,8 @@
 \docType{package}
 \name{common_min}
 \alias{common_min}
-\title{Common Minimum Distance Calculations for Beach Transects}
+\title{common_min.R
+Common Minimum Distance Calculations for Beach Transects}
 \description{
 Functions for calculating common minimum distance points across transects.
 This hybrid implementation combines row-appending approach with accuracy-aware

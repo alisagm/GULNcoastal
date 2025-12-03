@@ -7,7 +7,7 @@
 export_transect_profiles_csv(
   data,
   park,
-  output_dir = getwd(),
+  output_dir = output_dir,
   date = format(Sys.Date(), "\%Y\%m\%d"),
   verbose = TRUE
 )

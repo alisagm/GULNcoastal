@@ -7,7 +7,7 @@
 save_topo_transects_rds(
   data,
   auc_results,
-  output_dir = getwd(),
+  output_dir = output_dir,
   date = format(Sys.Date(), "\%Y\%m\%d"),
   verbose = TRUE
 )

@@ -4,7 +4,7 @@
 \alias{load_topo_transects_rds}
 \title{Load Topographic Transect Analysis Results from RDS}
 \usage{
-load_topo_transects_rds(filepath = NULL, input_dir = getwd(), verbose = TRUE)
+load_topo_transects_rds(filepath = NULL, input_dir = input_dir, verbose = TRUE)
 }
 \arguments{
 \item{filepath}{Character. Path to RDS file. If NULL, finds most recent file
