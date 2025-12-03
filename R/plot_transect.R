@@ -427,416 +427,29 @@ add_auc_text_annotation <- function(p, filtered_data, transect_num, years, auc_r
 }
 
 # ============================================================================
-# CORE PLOTTING ENGINE (INTERNAL)
+# HELPER FUNCTIONS
 # ============================================================================
 
-#' Plot beach profile transect for one or more years
+#' Validate plot inputs
 #'
-#' Internal core plotting function. Users should call [plot_transect_profiles()]
-#' with a config object instead.
+#' Validates that all required inputs are present and correctly formatted
+#' for transect plotting functions.
 #'
-#' @param data Dataframe with transect data.
-#' @param transect_num Character. Transect ID to plot.
-#' @param years Numeric vector. Years to include (NULL = all available).
-#' @param auc_results Dataframe with AUC results.
-#' @param show_auc Logical. Include AUC visualization.
-#' @param shade_area Logical. Shade AUC areas.
-#' @param color_palette Named character vector. Colors for each year.
-#' @param xlim_range Numeric vector. X-axis limits.
-#' @param ylim_range Numeric vector. Y-axis limits.
-#' @param show_uncertainty_bands Logical. Show elevation uncertainty ribbons.
-#' @param show_auc_uncertainty Logical. Show AUC confidence intervals.
-#' @param show_integration_boundaries Logical. Show integration boundary lines.
-#' @param uncertainty_alpha Numeric. Transparency for uncertainty bands.
-#' @param uncertainty_color Character. Color for uncertainty visualization.
-#' @param verbose Logical. Print progress messages.
-#'
-#' @return A ggplot object.
-#'
+#' @param data Dataframe with transect data
+#' @param auc_results Dataframe with AUC results
+#' @param config plot_config object
 #' @keywords internal
 #' @noRd
-plot_transect_year <- function(data, transect_num = NULL, years = NULL, auc_results = NULL,
-                               show_auc = TRUE, shade_area = TRUE, color_palette = NULL,
-                               xlim_range = NULL, ylim_range = NULL,
-                               show_uncertainty_bands = TRUE,
-                               show_auc_uncertainty = TRUE,
-                               show_integration_boundaries = FALSE,
-                               uncertainty_alpha = 0.3,
-                               uncertainty_color = "gray70",
-                               verbose = FALSE) {
-
-  # Validate inputs
-  available_transects <- data |> pull(transect) |> unique() |> sort()
-
-  if(is.null(transect_num)) {
-    stop(paste("No transect number provided. Available transects:", paste(available_transects, collapse = ", ")))
-  }
-
-  if(!transect_num %in% available_transects) {
-    stop(paste("No transect with number", transect_num, "found. Available transects:", paste(available_transects, collapse = ", ")))
-  }
-
-  # Get all years if not specified
-  if(is.null(years)) {
-    available_years <- data |>
-      filter(transect == transect_num) |>
-      pull(year) |>
-      unique() |>
-      sort()
-    years <- available_years
-  }
-
-  # Filter data
-  filtered_data <- data |>
-    filter(transect == transect_num, year %in% years)
-
-  if(nrow(filtered_data) == 0) {
-    stop(paste("No data found for transect", transect_num, "in years:", paste(years, collapse = ", ")))
-  }
-
-  # Get metadata
-  park_name <- filtered_data |> pull(park) |> first()
-
-  # Extract common_min distance from point_type column
-  common_min_dist <- filtered_data |>
-    filter(transect == transect_num, point_type == "common_min") |>
-    pull(distance) |>
-    first()
-  if(length(common_min_dist) == 0 || is.na(common_min_dist)) {
-    common_min_dist <- NA
-  }
-
-  # Track legend state for unified legend configuration
-  has_common_min <- !is.na(common_min_dist)
-  has_interp <- nrow(filtered_data |> filter(point_type == "interpolated")) > 0
-  has_extrap <- nrow(filtered_data |> filter(point_type == "extrapolated")) > 0
-  is_multiyear <- length(years) > 1
-
-  # Create title
-  title_text <- paste(park_name, "Transect", transect_num)
-  if(length(years) == 1) {
-    subtitle_text <- as.character(years)
-  } else {
-    subtitle_text <- format_year_sequence(years, park_name)
-  }
-
-  # Create base plot
-  p <- ggplot(filtered_data) +
-    aes(x = distance, y = elevation) +
-    ylab("Elevation [m]") +
-    xlab("Distance along transect [m]") +
-    labs(title = title_text, subtitle = subtitle_text) +
-    theme(
-      plot.title = element_text(size = 14, face = "bold"),
-      plot.subtitle = element_text(size = 11)
-    )
-
-  # Apply axis limits
-  if(!is.null(ylim_range)) {
-    p <- p + ylim(ylim_range[1], ylim_range[2])
-  } else {
-    p <- p + ylim(.DEFAULT_Y_MIN, .DEFAULT_Y_MAX)
-  }
-
-  if(!is.null(xlim_range)) {
-    p <- p + xlim(xlim_range[1], xlim_range[2])
-  }
-
-  # Get or generate color palette
-  colors <- NULL
-  if(length(years) >= 1) {
-    if(!is.null(color_palette)) {
-      colors <- color_palette[as.character(years)]
-    } else {
-      if(length(years) == 1) {
-        colors <- "#440154FF"  # Viridis dark purple (default single color)
-        names(colors) <- as.character(years)
-      } else {
-        colors <- rainbow(length(years))
-        names(colors) <- as.character(years)
-      }
-    }
-  }
-
-  # Add shading if requested
-  if(shade_area && !is.null(auc_results)) {
-    p <- tryCatch({
-      add_shading_layers(p, filtered_data, transect_num, years, auc_results, colors)
-    }, error = function(e) {
-      warning("Failed to add shading layers for transect ", transect_num,
-              ": ", e$message, ". Continuing without shading.", call. = FALSE)
-      p  # Return plot without shading
-    })
-  }
-
-  # Add elevation uncertainty bands
-  if(show_uncertainty_bands) {
-    # Create minimal config object for uncertainty settings
-    uncertainty_config <- list(
-      show_uncertainty_bands = show_uncertainty_bands,
-      uncertainty_alpha = uncertainty_alpha,
-      uncertainty_color = uncertainty_color
-    )
-
-    p <- tryCatch({
-      add_uncertainty_bands(p, filtered_data, years, colors, uncertainty_config)
-    }, error = function(e) {
-      if(verbose) {
-        warning("Failed to add uncertainty bands for transect ", transect_num,
-                ": ", e$message, ". Continuing without uncertainty visualization.", call. = FALSE)
-      }
-      p  # Return plot without uncertainty bands
-    })
-  }
-
-  # Add line and points (simplified - no legend configuration here)
-  p <- p + geom_path(linewidth = 1)
-
-  if(is_multiyear) {
-    # Multi-year: add color aesthetic for year grouping
-    p <- p + aes(color = as.factor(year), group = year)
-  }
-
-  # Add measured/common_min/measured_zero points (no legend)
-  if(is_multiyear) {
-    # Multi-year: inherit color from aes(color = year)
-    p <- p +
-      geom_point(
-        data = filtered_data |> filter(point_type %in% c("measured", "common_min", "measured_zero")),
-        alpha = 0.7,
-        size = 1.2,
-        shape = 16,
-        show.legend = FALSE
-      )
-  } else {
-    # Single-year: use explicit year color
-    year_color <- colors[as.character(years)]
-    p <- p +
-      geom_point(
-        data = filtered_data |> filter(point_type %in% c("measured", "common_min", "measured_zero")),
-        alpha = 0.6,
-        size = 1.5,
-        shape = 16,
-        color = year_color,
-        show.legend = FALSE
-      )
-  }
-
-  # Add interpolated points (green, with shape aesthetic for legend)
-  if(has_interp) {
-    p <- p +
-      geom_point(
-        data = filtered_data |> filter(point_type == "interpolated"),
-        aes(shape = "Interpolated"),
-        alpha = if(is_multiyear) 0.7 else 0.6,
-        size = if(is_multiyear) 1.2 else 1.5,
-        color = "green",
-        show.legend = TRUE
-      )
-  }
-
-  # Add extrapolated points (red, with shape aesthetic for legend)
-  if(has_extrap) {
-    p <- p +
-      geom_point(
-        data = filtered_data |> filter(point_type == "extrapolated"),
-        aes(shape = "Extrapolated"),
-        alpha = if(is_multiyear) 0.7 else 0.6,
-        size = if(is_multiyear) 1.2 else 1.5,
-        color = "red",
-        show.legend = TRUE
-      )
-  }
-
-  # Add common minimum vline with proper aesthetic mapping
-  # Use the unified function directly (deprecated wrapper removed)
-  p <- add_common_min_vline_unified(p, common_min_dist, filtered_data, xlim_range, ylim_range)
-
-  # Configure all legends in unified system (from legend.R)
-  p <- configure_plot_legends(
-    p = p,
-    has_common_min = has_common_min,
-    has_interp = has_interp,
-    has_extrap = has_extrap,
-    is_multiyear = is_multiyear,
-    colors = colors,
-    years = years
-  )
-
-  # Add integration boundaries if requested
-  if(show_integration_boundaries && !is.null(auc_results)) {
-    p <- tryCatch({
-      add_integration_boundaries(p, transect_num, years, auc_results)
-    }, error = function(e) {
-      if(verbose) {
-        warning("Failed to add integration boundaries for transect ", transect_num,
-                ": ", e$message, ". Continuing without integration boundaries.", call. = FALSE)
-      }
-      p  # Return plot without integration boundaries
-    })
-  }
-
-  # Add AUC visualization
-  if(show_auc && !is.null(auc_results)) {
-    if(length(years) > 1) {
-      p <- add_auc_inset(p, filtered_data, transect_num, years, auc_results, colors,
-                         xlim_range, ylim_range, common_min_dist,
-                         show_uncertainty = show_auc_uncertainty)
-    } else {
-      p <- add_auc_text_annotation(p, filtered_data, transect_num, years, auc_results,
-                                   xlim_range, ylim_range,
-                                   show_uncertainty = show_auc_uncertainty)
-    }
-  }
-
-  return(p)
-}
-
-# ============================================================================
-# PUBLIC API
-# ============================================================================
-
-#' Plot transect profiles using configuration presets
-#'
-#' Creates a ggplot visualization of transect elevation profiles with optional
-#' AUC visualization, uncertainty bands, and multi-year comparisons. This is
-#' the primary interface for generating transect plots in GULNcoastal.
-#'
-#' @param data Dataframe with transect profile data for a **single transect**.
-#'   Required columns: `transect`, `year`, `park`, `distance`, `elevation`.
-#'   Optional columns for enhanced visualization: `point_type`, `elev_upper`,
-#'   `elev_lower`.
-#' @param auc_results Dataframe with AUC results for the transect.
-#'   Required columns: `transect`, `year`, `auc`, `segments`.
-#'   Optional columns for uncertainty: `auc_upper`, `auc_lower`, `auc_sigma`,
-#'   `segment_info`.
-#' @param config A `plot_config` object controlling all visualization options.
-#'   Create using [create_plot_config()] for full customization, or use a
-#'   preset for common workflows.
-#'
-#' @section Configuration Presets:
-#' GULNcoastal provides several presets for common use cases:
-#'
-#' \describe{
-#'   \item{[config_quick()]}{Fast exploration with minimal options. Shows most
-#'     recent year(s) at lower resolution. Ideal for interactive data review.
-#'     Example: `config_quick(n_years = 2)`}
-#'   \item{[config_temporal()]}{Baseline vs. recent comparison. Shows first
-#'     survey year alongside recent years for temporal change analysis.
-#'     Example: `config_temporal(n_recent = 2)`}
-#'   \item{[config_annual()]}{Annual progression plots. Generates separate
-#'     output for each survey year showing cumulative change from baseline.
-#'     Example: `config_annual()`}
-#'   \item{[config_automated_full()]}{Full analysis with all features enabled.
-#'     Best for comprehensive reporting. Example: `config_automated_full()`}
-#' }
-#'
-#' @section Custom Configuration:
-#' For fine-grained control, use [create_plot_config()] with a data filter:
-#'
-#' ```
-#' config <- create_plot_config(
-#'   data_filter = create_data_filter(
-#'     year_selector = years_baseline_recent(3),
-#'     parks = "PAIS"
-#'   ),
-#'   show_auc = TRUE,
-#'   show_uncertainty_bands = TRUE,
-#'   show_inset = TRUE,
-#'   axis_limits = "park",
-#'   theme = "default",
-#'   color_palette = "viridis",
-#'   file_format = "png",
-#'   dpi = 300
-#' )
-#' ```
-#'
-#' @section Key Configuration Options:
-#' \describe{
-#'   \item{axis_limits}{Controls y-axis scaling: `"park"` (consistent within
-#'     park), `"dataset"` (consistent across all data), `"custom"` (user-specified
-#'     via `custom_ylim`), or `"none"` (auto-scale per plot).}
-#'   \item{show_auc}{If TRUE, displays AUC as inset bar chart (multi-year) or
-#'     text annotation (single-year).}
-#'   \item{show_uncertainty_bands}{If TRUE and data contains `elev_upper`/`elev_lower`,
-#'     displays elevation uncertainty as ribbons.}
-#'   \item{show_auc_uncertainty}{If TRUE and AUC results contain uncertainty
-#'     columns, displays error bars on AUC visualization.}
-#'   \item{show_integration_boundaries}{If TRUE, shows vertical lines at AUC
-#'     integration boundaries.}
-#' }
-#'
-#' @return A ggplot object that can be further modified, saved with [ggplot2::ggsave()],
-#'   or printed directly.
-#'
-#' @seealso
-#' Configuration: [create_plot_config()], [modify_config()], [validate_config()]
-#'
-#' Presets: [config_quick()], [config_temporal()], [config_annual()], [config_automated_full()]
-#'
-#' Data filtering: [create_data_filter()], [years_baseline_recent()], [years_recent()]
-#'
-#' @examples
-#' \dontrun{
-#' # Quick exploration of recent data
-#' p <- plot_transect_profiles(
-#'   data = transect_data,
-#'   auc_results = auc_data,
-#'   config = config_quick(n_years = 2)
-#' )
-#'
-#' # Temporal comparison (baseline vs recent)
-#' p <- plot_transect_profiles(
-#'   data = transect_data,
-#'   auc_results = auc_data,
-#'   config = config_temporal(n_recent = 2)
-#' )
-#'
-#' # Custom configuration with uncertainty visualization
-#' config <- create_plot_config(
-#'   data_filter = create_data_filter(year_selector = years_recent(3)),
-#'   show_uncertainty_bands = TRUE,
-#'   show_auc_uncertainty = TRUE,
-#'   axis_limits = "park"
-#' )
-#' p <- plot_transect_profiles(transect_data, auc_data, config)
-#'
-#' # Save the plot
-#' ggplot2::ggsave("transect_plot.png", p, width = 12, height = 8, dpi = 300)
-#' }
-#'
-#' @export
-plot_transect_profiles <- function(data, auc_results, config) {
-
-  # Validate inputs
+validate_plot_inputs <- function(data, auc_results, config) {
+  # Validate data
   if (missing(data) || is.null(data)) {
     stop("data is required and cannot be NULL", call. = FALSE)
   }
 
-  if (missing(auc_results) || is.null(auc_results)) {
-    stop("auc_results is required and cannot be NULL", call. = FALSE)
-  }
-
-  if (missing(config) || is.null(config)) {
-    stop("config is required and cannot be NULL", call. = FALSE)
-  }
-
-  # Validate config
-  if (!inherits(config, "plot_config")) {
-    stop("config must be a plot_config object. Use create_plot_config() or config_automated_full().",
-         call. = FALSE)
-  }
-
-  # Validate data is not empty
   if (nrow(data) == 0) {
     stop("data cannot be empty", call. = FALSE)
   }
 
-  if (nrow(auc_results) == 0) {
-    stop("auc_results cannot be empty", call. = FALSE)
-  }
-
-  # Validate required columns in data
   required_data_cols <- c("transect", "year", "park", "distance", "elevation")
   missing_data_cols <- setdiff(required_data_cols, names(data))
   if (length(missing_data_cols) > 0) {
@@ -844,7 +457,15 @@ plot_transect_profiles <- function(data, auc_results, config) {
          call. = FALSE)
   }
 
-  # Validate required columns in auc_results
+  # Validate auc_results
+  if (missing(auc_results) || is.null(auc_results)) {
+    stop("auc_results is required and cannot be NULL", call. = FALSE)
+  }
+
+  if (nrow(auc_results) == 0) {
+    stop("auc_results cannot be empty", call. = FALSE)
+  }
+
   required_auc_cols <- c("transect", "year", "auc", "segments")
   missing_auc_cols <- setdiff(required_auc_cols, names(auc_results))
   if (length(missing_auc_cols) > 0) {
@@ -852,7 +473,17 @@ plot_transect_profiles <- function(data, auc_results, config) {
          call. = FALSE)
   }
 
-  # Extract transect and years from data
+  # Validate config
+  if (missing(config) || is.null(config)) {
+    stop("config is required and cannot be NULL", call. = FALSE)
+  }
+
+  if (!inherits(config, "plot_config")) {
+    stop("config must be a plot_config object. Use create_plot_config() or a preset function.",
+         call. = FALSE)
+  }
+
+  # Validate data contains exactly one transect
   transect_id <- unique(data$transect)
   if (length(transect_id) != 1) {
     stop("data must contain exactly one transect. Found: ",
@@ -860,25 +491,26 @@ plot_transect_profiles <- function(data, auc_results, config) {
          call. = FALSE)
   }
 
-  years <- unique(data$year) |> sort()
+  # Validate years exist
+  years <- unique(data$year)
   if (length(years) == 0) {
     stop("No years found in data for transect ", transect_id, call. = FALSE)
   }
 
-  park <- unique(data$park) |> first()
-  if (is.na(park) || is.null(park)) {
-    stop("No valid park found in data for transect ", transect_id, call. = FALSE)
-  }
+  invisible(TRUE)
+}
 
-  # Get color palette with error handling
-  color_palette <- tryCatch({
-    get_color_palette(data)
-  }, error = function(e) {
-    stop("Failed to generate color palette: ", e$message,
-         call. = FALSE)
-  })
-
-  # Determine y-axis limits based on config
+#' Resolve y-axis limits from config
+#'
+#' Determines y-axis limits based on config settings and data.
+#'
+#' @param config plot_config object
+#' @param data Dataframe with transect data
+#' @param park Character. Park code
+#' @return Numeric vector of y-limits c(min, max), or NULL for auto-scale
+#' @keywords internal
+#' @noRd
+resolve_ylim_from_config <- function(config, data, park) {
   ylim_to_use <- NULL
 
   if (config$axis_limits == "park") {
@@ -891,6 +523,7 @@ plot_transect_profiles <- function(data, auc_results, config) {
       list(ylim = NULL)
     })
     ylim_to_use <- park_limits$ylim
+
   } else if (config$axis_limits == "dataset") {
     # Use dataset-wide limits (requires all data, but we only have filtered)
     # Fall back to park limits in this case
@@ -902,34 +535,296 @@ plot_transect_profiles <- function(data, auc_results, config) {
       list(ylim = NULL)
     })
     ylim_to_use <- park_limits$ylim
+
   } else if (config$axis_limits == "custom" && !is.null(config$custom_ylim)) {
     ylim_to_use <- config$custom_ylim
   }
   # If axis_limits == "none", ylim_to_use remains NULL (auto-scale)
 
-  # Call the underlying plotting function with error handling
-  plot <- tryCatch({
-    plot_transect_year(
-      data = data,
-      transect_num = transect_id,
-      years = years,
-      auc_results = auc_results,
-      show_auc = config$show_auc,
-      shade_area = config$shade_area,
-      color_palette = color_palette,
-      xlim_range = NULL,  # Always auto-scale x-axis per transect
-      ylim_range = ylim_to_use,
-      show_uncertainty_bands = config$show_uncertainty_bands,
-      show_auc_uncertainty = config$show_auc_uncertainty,
-      show_integration_boundaries = config$show_integration_boundaries,
-      uncertainty_alpha = config$uncertainty_alpha,
-      uncertainty_color = config$uncertainty_color,
-      verbose = config$verbose
-    )
+  return(ylim_to_use)
+}
+
+#' Extract common minimum distance from data
+#'
+#' Gets the common minimum distance value from point_type column.
+#'
+#' @param data Dataframe with transect data (must have point_type and distance columns)
+#' @return Numeric common minimum distance, or NA if not found
+#' @keywords internal
+#' @noRd
+extract_common_min_distance <- function(data) {
+  if (!"point_type" %in% names(data)) {
+    return(NA_real_)
+  }
+
+  common_min_dist <- data |>
+    filter(point_type == "common_min") |>
+    pull(distance) |>
+    first()
+
+  if (length(common_min_dist) == 0 || is.na(common_min_dist)) {
+    return(NA_real_)
+  }
+
+  return(common_min_dist)
+}
+
+# ============================================================================
+# CORE PLOTTING ENGINE
+# ============================================================================
+
+#' Plot beach profile transect
+#'
+#' Creates a ggplot visualization of a transect elevation profile with optional
+#' AUC visualization, uncertainty bands, and multi-year comparisons. This is
+#' the main plotting function in GULNcoastal.
+#'
+#' Uses a config-based approach where all visualization settings are specified
+#' through a \code{plot_config} object. Data must be pre-filtered to contain
+#' exactly one transect.
+#'
+#' @param data Dataframe with transect profile data for a **single transect**.
+#'   Required columns: \code{transect}, \code{year}, \code{park}, \code{distance},
+#'   \code{elevation}. Optional columns: \code{point_type}, \code{elev_upper},
+#'   \code{elev_lower}.
+#' @param auc_results Dataframe with AUC results for the transect.
+#'   Required columns: \code{transect}, \code{year}, \code{auc}, \code{segments}.
+#'   Optional columns: \code{auc_upper}, \code{auc_lower}, \code{auc_sigma},
+#'   \code{segment_info}.
+#' @param config A \code{plot_config} object controlling all visualization options.
+#'   Create using \code{\link{create_plot_config}} or use a preset like
+#'   \code{\link{config_automated_full}}.
+#'
+#' @return A ggplot object that can be further modified, saved with
+#'   \code{\link[ggplot2]{ggsave}}, or printed directly.
+#'
+#' @section Configuration Presets:
+#' GULNcoastal provides several presets for common use cases:
+#' \describe{
+#'   \item{\code{\link{config_quick}}}{Fast exploration with minimal options}
+#'   \item{\code{\link{config_temporal}}}{Baseline vs. recent comparison}
+#'   \item{\code{\link{config_annual}}}{Annual progression plots}
+#'   \item{\code{\link{config_automated_full}}}{Full analysis with all features}
+#' }
+#'
+#' @seealso
+#' Configuration: \code{\link{create_plot_config}}, \code{\link{modify_config}}
+#'
+#' Presets: \code{\link{config_quick}}, \code{\link{config_temporal}},
+#' \code{\link{config_annual}}, \code{\link{config_automated_full}}
+#'
+#' Data filtering: \code{\link{create_data_filter}}, \code{\link{years_baseline_recent}},
+#' \code{\link{years_recent}}
+#'
+#' @examples
+#' \dontrun{
+#' # Basic usage with preset config
+#' p <- plot_transect(
+#'   data = transect_data,
+#'   auc_results = auc_data,
+#'   config = config_automated_full()
+#' )
+#'
+#' # Custom configuration
+#' config <- create_plot_config(
+#'   data_filter = create_data_filter(year_selector = years_recent(3)),
+#'   show_uncertainty_bands = TRUE,
+#'   axis_limits = "park"
+#' )
+#' p <- plot_transect(transect_data, auc_data, config)
+#'
+#' # Save the plot
+#' ggplot2::ggsave("transect_plot.png", p, width = 12, height = 8, dpi = 300)
+#' }
+#'
+#' @export
+plot_transect <- function(data, auc_results, config) {
+
+  # Validate inputs
+  validate_plot_inputs(data, auc_results, config)
+
+  # Extract metadata from data (data is already filtered to single transect)
+  transect_id <- unique(data$transect)
+  years <- sort(unique(data$year))
+  park <- unique(data$park) |> first()
+
+  # Get color palette using config setting
+  color_palette <- tryCatch({
+    get_color_palette(data, palette = config$color_palette)
   }, error = function(e) {
-    stop("Failed to generate plot for transect ", transect_id, ": ", e$message,
-         call. = FALSE)
+    stop("Failed to generate color palette: ", e$message, call. = FALSE)
   })
 
-  return(plot)
+  # Resolve y-axis limits from config
+  ylim_range <- resolve_ylim_from_config(config, data, park)
+
+  # Extract common minimum distance
+  common_min_dist <- extract_common_min_distance(data)
+
+  # Track legend state for unified legend configuration
+  has_common_min <- !is.na(common_min_dist)
+  has_interp <- nrow(data |> filter(point_type == "interpolated")) > 0
+  has_extrap <- nrow(data |> filter(point_type == "extrapolated")) > 0
+  is_multiyear <- length(years) > 1
+
+  # Create title
+  title_text <- paste(park, "Transect", transect_id)
+  if (length(years) == 1) {
+    subtitle_text <- as.character(years)
+  } else {
+    subtitle_text <- format_year_sequence(years, park)
+  }
+
+  # Create base plot
+  p <- ggplot(data) +
+    aes(x = distance, y = elevation) +
+    ylab("Elevation [m]") +
+    xlab("Distance along transect [m]") +
+    labs(title = title_text, subtitle = subtitle_text) +
+    theme(
+      plot.title = element_text(size = 14, face = "bold"),
+      plot.subtitle = element_text(size = 11)
+    )
+
+  # Apply y-axis limits
+  if (!is.null(ylim_range)) {
+    p <- p + ylim(ylim_range[1], ylim_range[2])
+  } else {
+    p <- p + ylim(.DEFAULT_Y_MIN, .DEFAULT_Y_MAX)
+  }
+
+  # x-axis: always auto-scale per transect
+  # (xlim_range parameter removed - not used in config system)
+
+  # Get colors for this transect's years
+  colors <- color_palette[as.character(years)]
+
+  # Add shading if requested
+  if (config$shade_area && !is.null(auc_results)) {
+    p <- tryCatch({
+      add_shading_layers(p, data, transect_id, years, auc_results, colors)
+    }, error = function(e) {
+      warning("Failed to add shading layers for transect ", transect_id,
+              ": ", e$message, ". Continuing without shading.", call. = FALSE)
+      p  # Return plot without shading
+    })
+  }
+
+  # Add elevation uncertainty bands
+  if (config$show_uncertainty_bands) {
+    p <- tryCatch({
+      add_uncertainty_bands(p, data, years, colors, config)
+    }, error = function(e) {
+      if (config$verbose) {
+        warning("Failed to add uncertainty bands for transect ", transect_id,
+                ": ", e$message, ". Continuing without uncertainty visualization.",
+                call. = FALSE)
+      }
+      p  # Return plot without uncertainty bands
+    })
+  }
+
+  # Add line and points
+  p <- p + geom_path(linewidth = 1)
+
+  if (is_multiyear) {
+    # Multi-year: add color aesthetic for year grouping
+    p <- p + aes(color = as.factor(year), group = year)
+  }
+
+  # Add measured/common_min/measured_zero points (no legend)
+  if (is_multiyear) {
+    # Multi-year: inherit color from aes(color = year)
+    p <- p +
+      geom_point(
+        data = data |> filter(point_type %in% c("measured", "common_min", "measured_zero")),
+        alpha = 0.7,
+        size = 1.2,
+        shape = 16,
+        show.legend = FALSE
+      )
+  } else {
+    # Single-year: use explicit year color
+    year_color <- colors[as.character(years)]
+    p <- p +
+      geom_point(
+        data = data |> filter(point_type %in% c("measured", "common_min", "measured_zero")),
+        alpha = 0.6,
+        size = 1.5,
+        shape = 16,
+        color = year_color,
+        show.legend = FALSE
+      )
+  }
+
+  # Add interpolated points (green, with shape aesthetic for legend)
+  if (has_interp) {
+    p <- p +
+      geom_point(
+        data = data |> filter(point_type == "interpolated"),
+        aes(shape = "Interpolated"),
+        alpha = if (is_multiyear) 0.7 else 0.6,
+        size = if (is_multiyear) 1.2 else 1.5,
+        color = "green",
+        show.legend = TRUE
+      )
+  }
+
+  # Add extrapolated points (red, with shape aesthetic for legend)
+  if (has_extrap) {
+    p <- p +
+      geom_point(
+        data = data |> filter(point_type == "extrapolated"),
+        aes(shape = "Extrapolated"),
+        alpha = if (is_multiyear) 0.7 else 0.6,
+        size = if (is_multiyear) 1.2 else 1.5,
+        color = "red",
+        show.legend = TRUE
+      )
+  }
+
+  # Add common minimum vline
+  p <- add_common_min_vline_unified(p, common_min_dist, data,
+                                    xlim_range = NULL, ylim_range)
+
+  # Configure all legends in unified system
+  p <- configure_plot_legends(
+    p = p,
+    has_common_min = has_common_min,
+    has_interp = has_interp,
+    has_extrap = has_extrap,
+    is_multiyear = is_multiyear,
+    colors = colors,
+    years = years
+  )
+
+  # Add integration boundaries if requested
+  if (config$show_integration_boundaries && !is.null(auc_results)) {
+    p <- tryCatch({
+      add_integration_boundaries(p, transect_id, years, auc_results)
+    }, error = function(e) {
+      if (config$verbose) {
+        warning("Failed to add integration boundaries for transect ", transect_id,
+                ": ", e$message, ". Continuing without integration boundaries.",
+                call. = FALSE)
+      }
+      p  # Return plot without integration boundaries
+    })
+  }
+
+  # Add AUC visualization
+  if (config$show_auc && !is.null(auc_results)) {
+    if (length(years) > 1) {
+      p <- add_auc_inset(p, data, transect_id, years, auc_results, colors,
+                         xlim_range = NULL, ylim_range, common_min_dist,
+                         show_uncertainty = config$show_auc_uncertainty)
+    } else {
+      p <- add_auc_text_annotation(p, data, transect_id, years, auc_results,
+                                   xlim_range = NULL, ylim_range,
+                                   show_uncertainty = config$show_auc_uncertainty)
+    }
+  }
+
+  return(p)
 }
+

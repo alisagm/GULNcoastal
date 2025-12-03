@@ -59,5 +59,5 @@ save_plot_file(
 }
 \seealso{
 [ggplot2::ggsave()] for underlying save mechanism,
-  [plot_transect_profiles()] for generating transect plots
+  [plot_transect()] for generating transect plots
 }

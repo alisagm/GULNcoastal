@@ -40,16 +40,17 @@ test_that("single year plot with AUC shading", {
   latest_year <- max(t_data$year)
   t_data <- t_data[t_data$year == latest_year, ]
 
-  colors <- get_color_palette(t_data)
-
-  p <- plot_transect_year(
-    data = t_data,
-    transect_num = first_transect,
-    years = latest_year,
-    auc_results = td$auc,
+  # Create config for single year with AUC and shading
+  config <- create_plot_config(
     show_auc = TRUE,
     shade_area = TRUE,
-    color_palette = colors
+    axis_limits = "none"
+  )
+
+  p <- plot_transect(
+    data = t_data,
+    auc_results = td$auc,
+    config = config
   )
 
   expect_doppelganger("single-year-auc-shading", p)
@@ -66,16 +67,17 @@ test_that("single year plot without AUC", {
   latest_year <- max(t_data$year)
   t_data <- t_data[t_data$year == latest_year, ]
 
-  colors <- get_color_palette(t_data)
-
-  p <- plot_transect_year(
-    data = t_data,
-    transect_num = first_transect,
-    years = latest_year,
-    auc_results = td$auc,
+  # Create config for single year without AUC
+  config <- create_plot_config(
     show_auc = FALSE,
     shade_area = FALSE,
-    color_palette = colors
+    axis_limits = "none"
+  )
+
+  p <- plot_transect(
+    data = t_data,
+    auc_results = td$auc,
+    config = config
   )
 
   expect_doppelganger("single-year-no-auc", p)
@@ -98,16 +100,17 @@ test_that("multi-year baseline vs recent comparison", {
   years <- c(min(t_data$year), max(t_data$year))
   t_data <- t_data[t_data$year %in% years, ]
 
-  colors <- get_color_palette(t_data)
-
-  p <- plot_transect_year(
-    data = t_data,
-    transect_num = first_transect,
-    years = years,
-    auc_results = td$auc,
+  # Create config for multi-year comparison
+  config <- create_plot_config(
     show_auc = TRUE,
     shade_area = TRUE,
-    color_palette = colors
+    axis_limits = "none"
+  )
+
+  p <- plot_transect(
+    data = t_data,
+    auc_results = td$auc,
+    config = config
   )
 
   expect_doppelganger("multi-year-baseline-recent", p)
@@ -121,18 +124,18 @@ test_that("multi-year all years", {
 
   first_transect <- unique(td$data$transect)[1]
   t_data <- td$data[td$data$transect == first_transect, ]
-  years <- sort(unique(t_data$year))
 
-  colors <- get_color_palette(t_data)
-
-  p <- plot_transect_year(
-    data = t_data,
-    transect_num = first_transect,
-    years = years,
-    auc_results = td$auc,
+  # Create config for all years
+  config <- create_plot_config(
     show_auc = TRUE,
     shade_area = TRUE,
-    color_palette = colors
+    axis_limits = "none"
+  )
+
+  p <- plot_transect(
+    data = t_data,
+    auc_results = td$auc,
+    config = config
   )
 
   expect_doppelganger("multi-year-all", p)
