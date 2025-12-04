@@ -102,7 +102,7 @@ config_temporal <- function(n_recent = 2) {
   create_plot_config(
     name = "temporal",
     data_filter = create_data_filter(year_selector = years_baseline_recent(n_recent)),
-    filename_suffix = "recent",
+    filename_suffix = "temporal",
     axis_limits = "park",
     show_auc = TRUE,
     show_uncertainty_bands = FALSE,
