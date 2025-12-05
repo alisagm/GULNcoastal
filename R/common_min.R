@@ -264,9 +264,40 @@ calculate_and_interpolate_common_min <- function(data, verbose = FALSE) {
         slope <- abs((df$elevation[upper_idx] - df$elevation[lower_idx]) /
                     (df$distance[upper_idx] - df$distance[lower_idx]))
 
-        # Check for near-zero or zero slope (would cause division issues)
+        # Check for near-zero slope
         if (slope < 1e-6) {
-          return(tibble())  # Skip interpolation for flat profiles (unreliable)
+          # Flat segment: elevation is unambiguously the same as bracketing points
+          # Use direct elevation uncertainty rather than position-based calculation
+
+          if (verbose) {
+            message(sprintf(
+              "Flat segment detected for common_min interpolation\n  Transect: %s, Year: %s, Distance: %.2fm\n  Using direct elevation assignment.",
+              first(df$transect), first(df$year), cm
+            ))
+          }
+
+          # Elevation uncertainty for flat segment (combined measurement error)
+          elev_uncertainty <- sqrt(df$sigma_v[lower_idx]^2 + df$sigma_v[upper_idx]^2)
+
+          # Get accuracy tier from lower point
+          tier <- df$accuracy_tier[lower_idx]
+
+          return(tibble(
+            transect = first(df$transect),
+            year = first(df$year),
+            distance = cm,
+            elevation = interp_elev,  # approx() still returns correct value for flat segments
+            point_type = 'common_min',
+            park = first(df$park),
+            cross_island = FALSE,
+            sigma_h = sigma_h_avg,
+            sigma_v = sigma_v_avg,
+            accuracy_tier = tier,
+            uncertainty = elev_uncertainty,
+            confidence = "high_flat",  # Flat interpolation is unambiguous
+            uncertainty_95ci = 1.96 * elev_uncertainty,
+            slope = 0
+          ))
         }
 
         # Calculate uncertainty using same formula as interpolated zero crossings
