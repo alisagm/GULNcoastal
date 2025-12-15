@@ -60,6 +60,10 @@ create_year_selector <- function(type, select, ...) {
 #' # Explicit "all years" selection
 #' selector <- years_all()
 #' print(selector)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_all <- function() {
   create_year_selector(
     type = "all",
@@ -85,6 +89,10 @@ years_all <- function() {
 #'
 #' # Get first 2 survey years per park
 #' selector <- years_first(2)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_first <- function(n = 1) {
   if (!is.numeric(n) || n < 1) {
     stop("n must be a positive integer", call. = FALSE)
@@ -119,6 +127,10 @@ years_first <- function(n = 1) {
 #'
 #' # Get most recent year only
 #' selector <- years_recent(1)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_recent <- function(n = 2) {
   if (!is.numeric(n) || n < 1) {
     stop("n must be a positive integer", call. = FALSE)
@@ -153,6 +165,10 @@ years_recent <- function(n = 2) {
 #'
 #' # Baseline + last year
 #' selector <- years_baseline_recent(1)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_baseline_recent <- function(n_recent = 2) {
   if (!is.numeric(n_recent) || n_recent < 1) {
     stop("n_recent must be a positive integer", call. = FALSE)
@@ -190,6 +206,10 @@ years_baseline_recent <- function(n_recent = 2) {
 #' @examples
 #' # Years between 2015 and 2020
 #' selector <- years_range(2015, 2020)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_range <- function(from, to) {
   if (!is.numeric(from) || !is.numeric(to)) {
     stop("from and to must be numeric years", call. = FALSE)
@@ -222,6 +242,10 @@ years_range <- function(from, to) {
 #' @examples
 #' # All surveys from 2018 onward
 #' selector <- years_since(2018)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_since <- function(year) {
   if (!is.numeric(year)) {
     stop("year must be numeric", call. = FALSE)
@@ -250,6 +274,10 @@ years_since <- function(year) {
 #' @examples
 #' # All surveys up to 2015
 #' selector <- years_until(2015)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_until <- function(year) {
   if (!is.numeric(year)) {
     stop("year must be numeric", call. = FALSE)
@@ -283,6 +311,10 @@ years_until <- function(year) {
 #' @examples
 #' # Specific years only
 #' selector <- years_explicit(2010, 2015, 2020)
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_explicit <- function(...) {
   years <- c(...)
   if (length(years) == 0) {
@@ -318,6 +350,10 @@ years_explicit <- function(...) {
 #' @examples
 #' # Compare first vs last year per park
 #' selector <- years_compare_endpoints()
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_compare_endpoints <- function() {
   create_year_selector(
     type = "compare_endpoints",
@@ -349,6 +385,10 @@ years_compare_endpoints <- function() {
 #'   years_first(1),
 #'   years_since(2018)
 #' )
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 years_combine <- function(...) {
   selectors <- list(...)
 
@@ -454,6 +494,9 @@ years_annual_progression <- function(target_year) {
 #'
 #' # Get as data frame for programmatic use
 #' selectors <- list_year_selectors(as_df = TRUE)
+#' @seealso
+#' \code{\link{preview_year_selection}} to test selector before use
+#' \code{\link{create_data_filter}} to use with data filtering
 list_year_selectors <- function(as_df = FALSE) {
   selectors <- data.frame(
     Function = c(
@@ -549,6 +592,9 @@ list_year_selectors <- function(as_df = FALSE) {
 #' preview_year_selection(years_recent(3), data)
 #' preview_year_selection(years_compare_endpoints(), data)
 #' }
+#' @seealso
+#' \code{\link{list_year_selectors}} for all available selectors
+#' \code{\link{create_data_filter}} to use with data filtering
 preview_year_selection <- function(selector, data, verbose = TRUE) {
   # Validate inputs
   if (!inherits(selector, "year_selector")) {

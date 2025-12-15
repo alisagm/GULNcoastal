@@ -52,14 +52,24 @@
 #' @param annual_mode Boolean. If TRUE, generates annual progression plots (one set per year). Default FALSE.
 #' @param name Character. Configuration name (for reference)
 #' @returns List with class "plot_config"
-#' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Using data_filter with year selector
 #' config <- create_plot_config(
 #'   data_filter = create_data_filter(year_selector = years_baseline_recent(2)),
 #'   show_inset = TRUE
 #' )
+#' }
+#'
+#' @seealso
+#' Preset configurations: \code{\link{config_quick}}, \code{\link{config_temporal}},
+#' \code{\link{config_annual}}, \code{\link{config_automated_full}}
+#'
+#' Related: \code{\link{modify_config}}, \code{\link{validate_config}},
+#' \code{\link{apply_config}}
+#'
+#' @export
 create_plot_config <- function(
     # Data filter
     data_filter = NULL,

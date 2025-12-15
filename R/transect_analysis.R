@@ -87,12 +87,27 @@
 #' # Access results
 #' head(results$auc_results)
 #' summary(results$data)
+#'
+#' # Standard usage: directory-based
+#' results <- run_transect_analysis(
+#'   data_dir = "data/raw",
+#'   output_dir = "data/output"
+#' )
+#'
+#' # Flexible usage: with pre-loaded data (new in v0.2.0)
+#' data <- import_transects_park("custom_file.csv")
+#' # ... clean/fix data as needed ...
+#' results <- run_transect_analysis(
+#'   data = data,
+#'   accuracy_table_path = "accuracy_values.csv"
+#' )
 #' }
 #'
 #' @seealso
-#' \code{\link{run_transect_analysis_data}} for pipeline using pre-loaded data
+#' \code{\link{run_transect_analysis_data}} for flexible version with pre-loaded data
 #' \code{\link{import_transects_park}} for data import details
 #' \code{\link{assign_accuracy}} for accuracy assignment
+#' \code{\link{load_accuracy_table}} for accuracy table loading
 #' \code{\link{calculate_auc_with_uncertainty}} for AUC calculation
 #' \code{\link{export_all_results}} for output format
 #'

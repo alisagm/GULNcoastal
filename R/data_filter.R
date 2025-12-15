@@ -28,6 +28,7 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Basic filter: baseline + recent years
 #' filter <- create_data_filter(
 #'   year_selector = years_baseline_recent(2)
@@ -44,6 +45,17 @@
 #'   year_selector = years_all(),
 #'   exclude_transects = c("PAIS_T001", "GUIS_T015")
 #' )
+#' }
+#'
+#'  @seealso
+#' Year selectors: \code{\link{years_all}}, \code{\link{years_first}},
+#' \code{\link{years_recent}}, \code{\link{years_baseline_recent}},
+#' \code{\link{years_range}}, \code{\link{years_explicit}}
+#'
+#' See all: \code{\link{list_year_selectors}}
+#'
+#' Related: \code{\link{apply_filter}}, \code{\link{resolve_filter}},
+#' \code{\link{preview_year_selection}}
 create_data_filter <- function(
     year_selector = NULL,
     parks = NULL,

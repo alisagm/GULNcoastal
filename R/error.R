@@ -327,20 +327,18 @@ validate_special_cases_table <- function(special_cases) {
 #'
 #' @examples
 #' \dontrun{
-#' # Load both tables
-#' accuracy_table <- load_accuracy_table("data/accuracy_values.csv")
-#' special_cases <- load_special_cases_table("data/special_cases.csv")
+#' # Standard usage
+#' accuracy_table <- load_accuracy_table("accuracy_values.csv")
+#' data_with_accuracy <- assign_accuracy(data, accuracy_table)
 #'
-#' # Apply with full hierarchy
+#' # With special cases for specific transects
+#' special_cases <- load_special_cases_table("special_cases.csv")
 #' data_with_accuracy <- assign_accuracy(
-#'   transect_data,
+#'   data,
 #'   accuracy_table,
 #'   special_cases,
 #'   verbose = TRUE
 #' )
-#'
-#' # Without special cases
-#' data_with_accuracy <- assign_accuracy(transect_data, accuracy_table)
 #'
 #' # Without any tables (uses defaults)
 #' data_with_accuracy <- assign_accuracy(transect_data)
