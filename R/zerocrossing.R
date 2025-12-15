@@ -423,7 +423,8 @@ find_zero_crossings_with_uncertainty <- function(data) {
 #'     \item{sigma_h}{horizontal accuracy at point}
 #'     \item{accuracy_tier}{quality tier}
 #'   }
-#' @export
+#' @keywords internal
+#' @noRd
 identify_all_zero_elevation_points <- function(data) {
 
   distance <- data$distance
@@ -601,7 +602,8 @@ identify_all_zero_elevation_points <- function(data) {
 #' @param left_boundary Left integration boundary (numeric)
 #' @param right_boundary Right integration boundary (numeric)
 #' @return Numeric vector of distances where internal zero crossings occur
-#' @export
+#' @keywords internal
+#' @noRd
 extract_internal_crossings <- function(zero_points, left_boundary, right_boundary) {
 
   # Use error-aware tolerance: point must be 3*sigma_h away from boundaries

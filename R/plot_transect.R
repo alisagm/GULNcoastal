@@ -19,7 +19,7 @@
 # ============================================================================
 
 # Internal constants for plot defaults
-# NOTE: These values also appear in add_common_min_vline_unified() in plot_legend.R
+# NOTE: These values also appear in add_common_min_line() in plot_legend.R
 # as magic numbers. Keep them in sync if modified.
 .GGPLOT_DEFAULT_EXPANSION <- 0.05     # ggplot default axis expansion (5%)
 .DEFAULT_Y_MIN <- -1                  # Default y-axis minimum
@@ -784,7 +784,7 @@ plot_transect <- function(data, auc_results, config) {
   }
 
   # Add common minimum vline
-  p <- add_common_min_vline_unified(p, common_min_dist, data,
+  p <- add_common_min_line(p, common_min_dist, data,
                                     xlim_range = NULL, ylim_range)
 
   # Configure all legends in unified system

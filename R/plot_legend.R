@@ -166,7 +166,7 @@ configure_plot_legends <- function(p, has_common_min, has_interp, has_extrap,
 #' @importFrom ggplot2 geom_vline annotate
 #' @keywords internal
 #' @noRd
-add_common_min_vline_unified <- function(p, common_min_dist, filtered_data,
+add_common_min_line <- function(p, common_min_dist, filtered_data,
                                          xlim_range, ylim_range) {
 
   if (is.na(common_min_dist)) {
