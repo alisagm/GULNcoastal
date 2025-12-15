@@ -7,7 +7,7 @@
 flag_high_uncertainty_crossings(zero_points, uncertainty_threshold = 2)
 }
 \arguments{
-\item{zero_points}{Data frame from \code{\link{identify_zero_points_all_transects}}}
+\item{zero_points}{Data frame from \code{\link{find_zero_crossings}}}
 
 \item{uncertainty_threshold}{Maximum acceptable uncertainty in meters (default 2.0m)}
 }

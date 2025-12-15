@@ -333,11 +333,11 @@ run_pairwise_analysis <- function(data_dir,
 
   if (verbose) cat("Finding zero crossings with uncertainty...\n")
 
-  zero_points_all <- identify_zero_points_all_transects(data_with_accuracy)
+  zero_points_all <- find_zero_crossings(data_with_accuracy)
 
   # Validate zero points
   if (!is.data.frame(zero_points_all)) {
-    stop("identify_zero_points_all_transects() did not return a data frame",
+    stop("find_zero_crossings() did not return a data frame",
          call. = FALSE)
   }
 

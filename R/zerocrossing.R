@@ -632,7 +632,7 @@ extract_internal_crossings <- function(zero_points, left_boundary, right_boundar
 #'   \code{sigma_v}, \code{accuracy_tier}
 #' @return Data frame with zero-elevation points and uncertainties for all transect-years
 #' @export
-identify_zero_points_all_transects <- function(data) {
+find_zero_crossings <- function(data) {
 
   # Extract metadata before processing
   metadata <- data |>
@@ -677,7 +677,7 @@ identify_zero_points_all_transects <- function(data) {
 #' Generate summary statistics about zero-crossing detection success and
 #' uncertainty across all transects.
 #'
-#' @param zero_points Data frame from \code{\link{identify_zero_points_all_transects}}
+#' @param zero_points Data frame from \code{\link{find_zero_crossings}}
 #' @return Summary data frame with quality metrics by park/year/method. Columns include:
 #'   \describe{
 #'     \item{park}{Park identifier}
@@ -714,7 +714,7 @@ summarize_zero_crossing_quality <- function(zero_points) {
 #' Identify zero crossings that exceed a specified uncertainty threshold.
 #' Useful for quality control and deciding which crossings to use in analysis.
 #'
-#' @param zero_points Data frame from \code{\link{identify_zero_points_all_transects}}
+#' @param zero_points Data frame from \code{\link{find_zero_crossings}}
 #' @param uncertainty_threshold Maximum acceptable uncertainty in meters (default 2.0m)
 #' @return Data frame with only high-uncertainty crossings, sorted by descending uncertainty
 #' @export

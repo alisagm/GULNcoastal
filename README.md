@@ -282,7 +282,7 @@ data_with_accuracy <- assign_accuracy(
 )
 
 # Step 4: Find zero crossings
-zero_points <- identify_zero_points_all_transects(data_with_accuracy)
+zero_points <- find_zero_crossings(data_with_accuracy)
 
 # Step 5: Add uncertainty
 data_classified <- add_measured_uncertainty(data_with_accuracy)
@@ -356,7 +356,7 @@ auc_results <- data_auc_ready |>
 
 ### Core Analysis (4 files, 30+ functions)
 - `run_transect_analysis()` - Complete analysis pipeline orchestrator
-- `identify_zero_points_all_transects()` - Zero-crossing detection
+- `find_zero_crossings()` - Zero-crossing detection
 - `calculate_and_interpolate_common_min()` - Common minimum boundary
 - `calculate_auc_with_uncertainty()` - Probability-weighted AUC
 
@@ -673,7 +673,7 @@ Measurement accuracy is assigned at import and propagated through all calculatio
 data <- assign_accuracy(data, accuracy_table)
 
 # Propagated through zero-crossing detection
-zeros <- identify_zero_points_all_transects(data)
+zeros <- find_zero_crossings(data)
 
 # Propagated through AUC calculation
 auc_results <- calculate_auc_with_uncertainty(data, zeros)

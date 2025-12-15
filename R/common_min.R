@@ -101,7 +101,7 @@ calculate_and_interpolate_common_min <- function(data, verbose = FALSE) {
   # Validate input: check for cross_island column
   if (!"cross_island" %in% names(data)) {
     stop("ERROR: cross_island column missing from input data. ",
-         "This is a critical bug - check identify_zero_points_all_transects().",
+         "This is a critical bug - check find_zero_crossings().",
          call. = FALSE)
   }
 

@@ -7,7 +7,7 @@
 summarize_zero_crossing_quality(zero_points)
 }
 \arguments{
-\item{zero_points}{Data frame from \code{\link{identify_zero_points_all_transects}}}
+\item{zero_points}{Data frame from \code{\link{find_zero_crossings}}}
 }
 \value{
 Summary data frame with quality metrics by park/year/method. Columns include:
