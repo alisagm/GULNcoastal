@@ -18,3 +18,8 @@ for each park.
 # Compare first vs last year per park
 selector <- years_compare_endpoints()
 }
+\seealso{
+\code{\link{list_year_selectors}} for all available selectors
+\code{\link{preview_year_selection}} to test selector before use
+\code{\link{create_data_filter}} to use with data filtering
+}

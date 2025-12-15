@@ -40,3 +40,7 @@ preview_year_selection(years_recent(3), data)
 preview_year_selection(years_compare_endpoints(), data)
 }
 }
+\seealso{
+\code{\link{list_year_selectors}} for all available selectors
+\code{\link{create_data_filter}} to use with data filtering
+}

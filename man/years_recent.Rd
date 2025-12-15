@@ -24,3 +24,8 @@ selector <- years_recent(2)
 # Get most recent year only
 selector <- years_recent(1)
 }
+\seealso{
+\code{\link{list_year_selectors}} for all available selectors
+\code{\link{preview_year_selection}} to test selector before use
+\code{\link{create_data_filter}} to use with data filtering
+}

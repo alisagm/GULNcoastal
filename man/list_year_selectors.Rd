@@ -26,3 +26,7 @@ list_year_selectors()
 # Get as data frame for programmatic use
 selectors <- list_year_selectors(as_df = TRUE)
 }
+\seealso{
+\code{\link{preview_year_selection}} to test selector before use
+\code{\link{create_data_filter}} to use with data filtering
+}

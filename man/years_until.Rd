@@ -20,3 +20,8 @@ Useful for historical analysis.
 # All surveys up to 2015
 selector <- years_until(2015)
 }
+\seealso{
+\code{\link{list_year_selectors}} for all available selectors
+\code{\link{preview_year_selection}} to test selector before use
+\code{\link{create_data_filter}} to use with data filtering
+}

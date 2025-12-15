@@ -21,3 +21,8 @@ and available years for each park.
 # Specific years only
 selector <- years_explicit(2010, 2015, 2020)
 }
+\seealso{
+\code{\link{list_year_selectors}} for all available selectors
+\code{\link{preview_year_selection}} to test selector before use
+\code{\link{create_data_filter}} to use with data filtering
+}

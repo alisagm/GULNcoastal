@@ -11,6 +11,7 @@
 #' @importFrom withr with_tempdir
 #' @importFrom utils head
 ## usethis namespace: end
+NULL
 
 #' Gulf Coast Network Coastal Monitoring Analysis Tools
 #'
@@ -120,7 +121,7 @@
 #'   \item \code{vignette("filtering", package = "GULNcoastal")}
 #' }
 #'
-#' @docType package
+#' @docType _PACKAGE
 #' @name GULNcoastal-package
 NULL
 

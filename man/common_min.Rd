@@ -2,6 +2,7 @@
 % Please edit documentation in R/common_min.R
 \docType{package}
 \name{common_min}
+\alias{GULNcoastal}
 \alias{common_min}
 \title{common_min.R
 Common Minimum Distance Calculations for Beach Transects}
