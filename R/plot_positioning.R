@@ -121,8 +121,7 @@ find_label_position <- function(data, vline_x, xlim, ylim) {
 #' @param n_years Integer. Number of years (bars) in the chart
 #' @param corner Character. Corner location: "left" or "right"
 #' @returns Named list with adjusted coordinates in normalized space (0-1)
-#' @keywords internal
-#' @noRd
+#' @export
 adjust_inset_width <- function(position, n_years, corner = "right") {
   width_per_bar <- .MAX_INSET_WIDTH / .INSET_BARS_MAX
   actual_width <- min(width_per_bar * n_years, .MAX_INSET_WIDTH)
@@ -237,8 +236,7 @@ calculate_inset_penalty <- function(pos, data, xlim, ylim, common_min) {
 #' @param common_min Double or NA. Position of common minimum vline, if present
 #' @returns Named list with left, bottom, right, top coordinates (all in 0-1 space)
 #'   and corner location ("left" or "right")
-#' @keywords internal
-#' @noRd
+#' @export
 find_best_inset_position <- function(data, xlim, ylim, common_min = NA) {
   # Define candidate positions using named constants
   candidates <- list(

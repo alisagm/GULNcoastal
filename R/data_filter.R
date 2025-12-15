@@ -431,14 +431,15 @@ print.resolved_filter <- function(x, ...) {
 }
 
 # ============================================================================
-# UTILITY FUNCTIONS
+# UTILITY FUNCTIONS (devtools for troubleshooting)
 # ============================================================================
 
 #' Check if object is a data_filter
 #'
 #' @param x Object to check
 #' @returns Logical
-#' @export
+#' @keywords internal
+#' @noRd
 is_data_filter <- function(x) {
   inherits(x, "data_filter")
 }
@@ -447,7 +448,8 @@ is_data_filter <- function(x) {
 #'
 #' @param x Object to check
 #' @returns Logical
-#' @export
+#' @keywords internal
+#' @noRd
 is_resolved_filter <- function(x) {
   inherits(x, "resolved_filter")
 }
