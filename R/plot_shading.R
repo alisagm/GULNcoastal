@@ -26,7 +26,8 @@
 #'     \item \code{year} - Year label (if provided)
 #'   }
 #' @note Shades ALL regions where elevation >= 0 (supports multi-peak profiles)
-#' @export
+#' @keywords internal
+#' @noRd
 create_shade_data <- function(segments, year = NULL) {
   if (is.null(segments) || length(segments) == 0) {
     return(NULL)

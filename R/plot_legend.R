@@ -25,7 +25,8 @@
 #' @param years Numeric vector of years being plotted
 #' @returns Modified ggplot object with unified legend configuration
 #' @importFrom ggplot2 scale_linetype_manual scale_color_manual scale_shape_manual guide_legend guides theme
-#' @export
+#' @keywords internal
+#' @noRd
 configure_plot_legends <- function(p, has_common_min, has_interp, has_extrap,
                                    is_multiyear, colors, years) {
 
@@ -163,7 +164,8 @@ configure_plot_legends <- function(p, has_common_min, has_interp, has_extrap,
 #' @param ylim_range Numeric vector of y-axis limits c(min, max), or NULL for auto
 #' @returns Modified ggplot object with vline and label added
 #' @importFrom ggplot2 geom_vline annotate
-#' @export
+#' @keywords internal
+#' @noRd
 add_common_min_vline_unified <- function(p, common_min_dist, filtered_data,
                                          xlim_range, ylim_range) {
 

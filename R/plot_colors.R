@@ -174,8 +174,8 @@ get_color_palette <- function(data, palette = "viridis") {
 #' format_year_sequence(c(2010, 2012, 2014, 2020, 2022), park = "PAIS")
 #' # Returns: "2010-2014, 2020, 2022"
 #' }
-#'
-#' @export
+#' @keywords internal
+#' @noRd
 format_year_sequence <- function(years, park) {
   years <- sort(years)
 
