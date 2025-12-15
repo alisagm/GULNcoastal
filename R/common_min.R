@@ -88,7 +88,7 @@
 #' @examples
 #' \dontrun{
 #' # Calculate common minimum points for all transects
-#' common_min_points <- calculate_and_interpolate_common_min(
+#' common_min_points <- calculate_common_min(
 #'   cleaned_data,
 #'   verbose = TRUE
 #' )
@@ -96,7 +96,7 @@
 #' # Add common_min points to existing zero points
 #' all_boundary_points <- bind_rows(zero_points, common_min_points)
 #' }
-calculate_and_interpolate_common_min <- function(data, verbose = FALSE) {
+calculate_common_min <- function(data, verbose = FALSE) {
 
   # Validate input: check for cross_island column
   if (!"cross_island" %in% names(data)) {

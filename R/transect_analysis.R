@@ -384,14 +384,14 @@ run_transect_analysis <- function(data_dir = NULL,
   # 6c. Calculate common minimum distances
   if (verbose) cat("Calculating common minima...\n")
 
-  common_mins <- calculate_and_interpolate_common_min(
+  common_mins <- calculate_common_min(
     data_with_zeros,
     verbose = verbose
   )
 
   # Validate common_mins result
   if (!is.data.frame(common_mins)) {
-    stop("calculate_and_interpolate_common_min() did not return a data frame",
+    stop("calculate_common_min() did not return a data frame",
          call. = FALSE)
   }
 
@@ -645,7 +645,7 @@ run_transect_analysis_data <- function(
   # Calculate common minima
   if (verbose) cat("Calculating common minima...\n")
 
-  common_mins <- calculate_and_interpolate_common_min(
+  common_mins <- calculate_common_min(
     data_with_zeros,
     verbose = verbose
   )
