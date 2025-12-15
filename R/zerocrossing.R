@@ -640,7 +640,7 @@ extract_internal_crossings <- function(zero_points, left_boundary, right_boundar
 #' data_with_accuracy <- assign_accuracy(data, accuracy_table)
 #'
 #' # Find all zero crossings with uncertainty
-#' zero_points <- find_zero_crossings(data_with_accuracy, verbose = TRUE)
+#' zero_points <- find_zero_crossings(data_with_accuracy)
 #'
 #' # Inspect results
 #' table(zero_points$point_type)  # interpolated, extrapolated, measured_zero

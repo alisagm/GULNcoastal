@@ -19,3 +19,15 @@ Group-aware wrapper for \code{\link{identify_all_zero_elevation_points}} that wo
 with grouped/nested dataframes in the workflow pipeline. Requires data
 with accuracy columns already assigned.
 }
+\examples{
+\dontrun{
+# After assigning accuracy
+data_with_accuracy <- assign_accuracy(data, accuracy_table)
+
+# Find all zero crossings with uncertainty
+zero_points <- find_zero_crossings(data_with_accuracy)
+
+# Inspect results
+table(zero_points$point_type)  # interpolated, extrapolated, measured_zero
+}
+}
