@@ -204,6 +204,131 @@ applied <- apply_config(config, data)
 # Generates plots showing progression: 2019, 2019-2020, 2019-2021, ..., 2019-2023
 ```
 
+## Custom Workflows
+
+### When Standard Workflow Isn't Enough
+
+Use `run_transect_analysis()` for standard cases where:
+- Data is in a single directory
+- All files follow the same format
+- No data cleaning or fixing needed
+- Standard accuracy tables apply
+
+Use **custom workflows** when you need:
+- Multiple data sources with different formats
+- Data cleaning (fix typos, standardize naming, handle NAs)
+- Combining datasets from different time periods
+- Custom import logic
+- Step-by-step processing for debugging
+
+### Pattern 1: Using `run_transect_analysis_data()`
+
+The flexible version accepts pre-loaded data:
+
+```r
+library(GULNcoastal)
+library(dplyr)
+
+# Import from multiple sources
+data1 <- import_transects_park("older_format.csv")
+data2 <- import_transects_park("newer_format.csv")
+
+# Fix issues
+data1$year[data1$year == 2017] <- 2016              # Fix typo
+data1$transect <- str_remove(data1$transect, "^t0*") # Standardize naming
+
+# Combine datasets
+data_combined <- bind_rows(
+  data1,
+  data2 |> filter(year %in% c(2017, 2025))
+) |>
+  drop_na() |>
+  arrange(transect, year)
+
+# Run analysis on cleaned data
+results <- run_transect_analysis_data(
+  data = data_combined,
+  accuracy_table = "path/to/accuracy_values.csv",
+  special_cases = NULL,
+  save_results = TRUE,
+  verbose = TRUE
+)
+```
+
+### Pattern 2: Individual Pipeline Steps
+
+For maximum control, call pipeline steps individually:
+
+```r
+# Step 1: Clean data
+data_clean <- data |>
+  group_by(transect, year, cross_island, park) |>
+  group_split() |>
+  lapply(remove_negatives) |>
+  bind_rows()
+
+# Step 2: Deduplicate
+data_deduplicated <- data_clean |>
+  group_by(transect, year, distance) |>
+  slice(1) |>
+  ungroup()
+
+# Step 3: Assign accuracy
+accuracy_table <- load_accuracy_table("accuracy_values.csv")
+data_with_accuracy <- assign_accuracy(
+  data_deduplicated,
+  accuracy_table = accuracy_table,
+  verbose = TRUE
+)
+
+# Step 4: Find zero crossings
+zero_points <- identify_zero_points_all_transects(data_with_accuracy)
+
+# Step 5: Add uncertainty
+data_classified <- add_measured_uncertainty(data_with_accuracy)
+
+# Step 6: Combine with zero points
+data_with_zeros <- bind_rows(
+  data_classified,
+  filter(zero_points, point_type %in% c("interpolated", "extrapolated"))
+) |>
+  arrange(transect, year, distance)
+
+# Step 7: Calculate common minimum
+common_mins <- calculate_and_interpolate_common_min(data_with_zeros)
+
+# Step 8: Prepare AUC-ready data
+data_auc_ready <- data_with_zeros |>
+  anti_join(
+    select(common_mins, transect, year, distance),
+    by = c("transect", "year", "distance")
+  ) |>
+  bind_rows(common_mins) |>
+  arrange(transect, year, distance)
+
+# Step 9: Calculate AUC
+auc_results <- data_auc_ready |>
+  group_by(transect, year) |>
+  group_split() |>
+  lapply(function(df) {
+    result <- calculate_auc_with_uncertainty(df)
+    result$transect <- first(df$transect)
+    result$year <- first(df$year)
+    return(result)
+  }) |>
+  bind_rows()
+```
+
+### Comparison: When to Use Each Pattern
+
+| Scenario | Use | Rationale |
+|----------|-----|-----------|
+| Standard analysis, single data source | `run_transect_analysis()` | Simplest, most convenient |
+| Multiple data sources, data cleaning needed | `run_transect_analysis_data()` | Flexible import, still automated |
+| Debugging pipeline, custom processing | Individual steps | Full control, inspect intermediate results |
+| Production batch processing | `run_transect_analysis()` | Reliable, tested, consistent |
+| Research/exploratory analysis | Individual steps or `_data()` | Iterate quickly, customize easily |
+
 ## Core Function Categories
 
 ### Data Import/Export (2 files, 13 functions)

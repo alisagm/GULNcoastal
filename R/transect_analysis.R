@@ -19,9 +19,10 @@
 #'   \item Calculate probability-weighted AUC with error propagation
 #' }
 #'
-#' @param data_dir Character. Path to directory containing raw transect CSV
+#' @param data_dir Character or NULL. Path to directory containing raw transect CSV
 #'   files. Each CSV must have columns: transect, year, distance, elevation.
 #'   Park is inferred from filename (must contain "GUIS" or "PAIS").
+#' @param data Dataframe or NULL. Pre-loaded raw transect data.
 #' @param processed_dir Character. Path to directory to save intermediate
 #'   result data files. Created if it doesn't exist.
 #' @param output_dir Character. Path to save results. Default is current
@@ -89,6 +90,7 @@
 #' }
 #'
 #' @seealso
+#' \code{\link{run_transect_analysis_data}} for pipeline using pre-loaded data
 #' \code{\link{import_transects_park}} for data import details
 #' \code{\link{assign_accuracy}} for accuracy assignment
 #' \code{\link{calculate_auc_with_uncertainty}} for AUC calculation
@@ -98,7 +100,8 @@
 #'   bind_rows anti_join left_join rename first
 #' @importFrom stats setNames
 #' @export
-run_transect_analysis <- function(data_dir,
+run_transect_analysis <- function(data_dir = NULL,
+                                  data = NULL,
                                   processed_dir = ".",
                                   output_dir = ".",
                                   accuracy_table_path = NULL,
@@ -106,12 +109,32 @@ run_transect_analysis <- function(data_dir,
                                   save_results = TRUE,
                                   verbose = FALSE) {
 
-
   # ──────────────────────────────────────────────────────────────────────────
 
+  # Allow either data_dir OR data (not both)
+  if (is.null(data_dir) && is.null(data)) {
+    stop("Either data_dir or data must be provided", call. = FALSE)
+  }
+
+  if (!is.null(data_dir) && !is.null(data)) {
+    stop("Provide either data_dir OR data, not both", call. = FALSE)
+  }
+
+  # If data provided, use flexible version
+  if (!is.null(data)) {
+    return(run_transect_analysis_data(
+      data = data,
+      accuracy_table = accuracy_table_path,
+      special_cases = special_cases_path,
+      save_results = save_results,
+      processed_dir = processed_dir,
+      output_dir = output_dir,
+      verbose = verbose
+    ))
+  }
 
   # Validate data directory
-  if (!dir.exists(data_dir)) {
+  if (!dir.exists(data_dir) && is.null(data)) {
     stop("Data directory does not exist: ", data_dir, call. = FALSE)
   }
 
@@ -472,6 +495,211 @@ run_transect_analysis <- function(data_dir,
 
   # Save if requested
   if (save_results) {
+    export_all_results(
+      data = results$data,
+      auc_results = results$auc_results,
+      processed_dir = processed_dir,
+      output_dir = output_dir,
+      date = format(Sys.Date(), "%Y%m%d"),
+      verbose = verbose
+    )
+  }
+
+  return(invisible(results))
+}
+
+#' Run Transect Analysis on Pre-Loaded Data
+#'
+#' Flexible version of run_transect_analysis() that accepts data frames
+#' instead of file paths. Use this when you need to:
+#' - Combine data from multiple sources
+#' - Clean/fix data before analysis
+#' - Use custom import logic
+#' - Debug individual pipeline steps
+#'
+#' @param data Data frame with columns: transect, year, distance, elevation, park
+#' @param accuracy_table Data frame with accuracy values (or path to CSV)
+#' @param special_cases Data frame with special cases (or path to CSV, or NULL)
+#' @param save_results Logical. Save outputs to processed_dir/output_dir
+#' @param processed_dir Directory for RDS output
+#' @param output_dir Directory for CSV outputs
+#' @param verbose Logical. Print progress messages
+#'
+#' @return List with data, auc_results, metadata
+#'
+#' @examples
+#' \dontrun{
+#' # Import and clean data YOUR way
+#' data1 <- import_transects_park("file1.csv")
+#' data2 <- import_transects_park("file2.csv")
+#'
+#' # Fix issues
+#' data1$year[data1$year == 2017] <- 2016
+#' data1$transect <- str_remove(data1$transect, "^t0*")
+#'
+#' # Combine
+#' data <- bind_rows(data1, data2)
+#'
+#' # Run analysis on cleaned data
+#' results <- run_transect_analysis_data(
+#'   data = data,
+#'   accuracy_table = "accuracy_values.csv",
+#'   save_results = TRUE
+#' )
+#' }
+#'
+#'@seealso
+#' \code{\link{run_transect_analysis}} for full pipeline including data import
+#' \code{\link{import_transects_park}} for data import details
+#' \code{\link{assign_accuracy}} for accuracy assignment
+#' \code{\link{calculate_auc_with_uncertainty}} for AUC calculation
+#' \code{\link{export_all_results}} for output format
+#'
+#' @export
+run_transect_analysis_data <- function(
+    data,
+    accuracy_table,
+    special_cases = NULL,
+    save_results = TRUE,
+    processed_dir = ".",
+    output_dir = ".",
+    verbose = FALSE) {
+
+  # Validate input data
+  required_cols <- c("transect", "year", "distance", "elevation", "park")
+  missing_cols <- setdiff(required_cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop("data is missing required columns: ",
+         paste(missing_cols, collapse = ", "), call. = FALSE)
+  }
+
+  # Load accuracy table if path provided
+  if (is.character(accuracy_table)) {
+    accuracy_table <- load_accuracy_table(accuracy_table)
+  }
+
+  # Load special cases if path provided
+  if (is.character(special_cases)) {
+    special_cases <- load_special_cases_table(special_cases)
+  }
+
+  # Mark as measured points
+  data_typed <- dplyr::mutate(data, point_type = "measured")
+
+  # Clean and deduplicate
+  if (verbose) cat("Cleaning and deduplicating data...\n")
+
+  data_clean <- data_typed |>
+    dplyr::group_by(transect, year, cross_island, park) |>
+    dplyr::group_split() |>
+    lapply(remove_negatives) |>
+    dplyr::bind_rows()
+
+  data_deduplicated <- data_clean |>
+    dplyr::group_by(transect, year, distance) |>
+    dplyr::slice(1) |>
+    dplyr::ungroup()
+
+  # Assign accuracy
+  if (verbose) cat("Assigning accuracy values...\n")
+
+  data_with_accuracy <- assign_accuracy(
+    data_deduplicated,
+    accuracy_table = accuracy_table,
+    special_cases = special_cases,
+    verbose = verbose
+  )
+
+  # Identify zero points
+  if (verbose) cat("Finding zero crossings...\n")
+
+  zero_points_all <- identify_zero_points_all_transects(data_with_accuracy)
+
+  # Prepare for AUC
+  if (verbose) cat("Preparing AUC data...\n")
+
+  data_classified <- add_measured_uncertainty(data_with_accuracy)
+
+  data_with_zeros <- dplyr::bind_rows(
+    data_classified,
+    dplyr::filter(zero_points_all,
+                  point_type %in% c("interpolated", "extrapolated"))
+  ) |>
+    dplyr::arrange(transect, year, distance)
+
+  # Calculate common minima
+  if (verbose) cat("Calculating common minima...\n")
+
+  common_mins <- calculate_and_interpolate_common_min(
+    data_with_zeros,
+    verbose = verbose
+  )
+
+  # Add common min points
+  if (nrow(common_mins) > 0) {
+    data_auc_ready <- data_with_zeros |>
+      dplyr::anti_join(
+        dplyr::select(common_mins, transect, year, distance),
+        by = c("transect", "year", "distance")
+      ) |>
+      dplyr::bind_rows(common_mins) |>
+      dplyr::arrange(transect, year, distance)
+  } else {
+    data_auc_ready <- data_with_zeros
+  }
+
+  # Calculate AUC with uncertainty
+  if (verbose) cat("Calculating probability-weighted AUC...\n")
+
+  auc_results_weighted <- data_auc_ready |>
+    dplyr::group_by(transect, year) |>
+    dplyr::group_split() |>
+    lapply(function(df) {
+      result <- calculate_auc_with_uncertainty(df)
+      result$transect <- dplyr::first(df$transect)
+      result$year <- dplyr::first(df$year)
+      return(result)
+    }) |>
+    dplyr::bind_rows()
+
+  # Calculate transect metrics
+  transect_metrics <- calculate_transect_metrics(data_auc_ready)
+
+  # Combine results
+  auc_results <- auc_results_weighted |>
+    dplyr::left_join(transect_metrics, by = c("transect", "year")) |>
+    dplyr::rename(
+      auc = auc_nominal,
+      auc_sigma = auc_uncertainty
+    ) |>
+    dplyr::select(
+      transect, year,
+      auc, auc_upper, auc_lower, auc_sigma, auc_uncertainty_pct,
+      overlap_m, overlap_pct, transect_length,
+      n_segments, segment_info, segments
+    )
+
+  # Package results
+  results <- list(
+    data = data_auc_ready,
+    auc_results = auc_results,
+    metadata = list(
+      timestamp = Sys.time(),
+      date = Sys.Date(),
+      n_transects = length(unique(data_auc_ready$transect)),
+      n_years = length(unique(data_auc_ready$year)),
+      n_observations = nrow(data_auc_ready),
+      parks = sort(unique(data_auc_ready$park)),
+      years = sort(unique(data_auc_ready$year)),
+      workflow_version = "v3_weighted_auc",
+      notes = "Probability-weighted AUC with uncertainty propagation"
+    )
+  )
+
+  # Save if requested
+  if (save_results) {
+    if (verbose) cat("Saving results...\n")
+
     export_all_results(
       data = results$data,
       auc_results = results$auc_results,

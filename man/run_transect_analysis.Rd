@@ -5,7 +5,8 @@
 \title{Run Complete Transect Analysis Pipeline}
 \usage{
 run_transect_analysis(
-  data_dir,
+  data_dir = NULL,
+  data = NULL,
   processed_dir = ".",
   output_dir = ".",
   accuracy_table_path = NULL,
@@ -15,9 +16,11 @@ run_transect_analysis(
 )
 }
 \arguments{
-\item{data_dir}{Character. Path to directory containing raw transect CSV
+\item{data_dir}{Character or NULL. Path to directory containing raw transect CSV
 files. Each CSV must have columns: transect, year, distance, elevation.
 Park is inferred from filename (must contain "GUIS" or "PAIS").}
+
+\item{data}{Dataframe or NULL. Pre-loaded raw transect data.}
 
 \item{processed_dir}{Character. Path to directory to save intermediate
 result data files. Created if it doesn't exist.}
@@ -114,6 +117,7 @@ summary(results$data)
 
 }
 \seealso{
+\code{\link{run_transect_analysis_data}} for pipeline using pre-loaded data
 \code{\link{import_transects_park}} for data import details
 \code{\link{assign_accuracy}} for accuracy assignment
 \code{\link{calculate_auc_with_uncertainty}} for AUC calculation
