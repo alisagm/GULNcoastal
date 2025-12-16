@@ -625,7 +625,7 @@ extract_internal_crossings <- function(zero_points, left_boundary, right_boundar
 
 #' Identify Zero Points for All Transect-Years with Accuracy
 #'
-#' Group-aware wrapper for \code{\link{identify_all_zero_elevation_points}} that works
+#' Group-aware wrapper for \code{identify_all_zero_elevation_points()} that works
 #' with grouped/nested dataframes in the workflow pipeline. Requires data
 #' with accuracy columns already assigned.
 #'

@@ -12,7 +12,7 @@ YEAR_CADENCE
 }
 \description{
 The typical interval (in years) between successive surveys. Used by
-\code{\link{format_year_sequence}} to identify consecutive runs of years.
+\code{format_year_sequence()} to identify consecutive runs of years.
 Default is 2 years.
 }
 \keyword{internal}

@@ -413,8 +413,8 @@ test_that("run_transect_analysis creates output files when save_results = TRUE",
       verbose = FALSE
     )
 
-    # Check that RDS file was created
-    rds_files <- list.files("output", pattern = "\\.rds$", full.names = TRUE)
+    # Check that RDS file was created (in current dir, default processed_dir)
+    rds_files <- list.files(".", pattern = "\\.rds$", full.names = TRUE)
     expect_true(
       length(rds_files) > 0,
       info = "Expected at least one RDS file"
