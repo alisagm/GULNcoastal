@@ -147,6 +147,13 @@ run_transect_analysis <- function(data_dir = NULL,
       verbose = verbose
     ))
   }
+n  # Create output directories if they do not exist
+  if (!dir.exists(processed_dir)) {
+    dir.create(processed_dir, recursive = TRUE)
+  }
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
 
   # Validate data directory
   if (!dir.exists(data_dir) && is.null(data)) {
@@ -600,6 +607,13 @@ run_transect_analysis_data <- function(
 
   # Mark as measured points
   data_typed <- dplyr::mutate(data, point_type = "measured")
+n  # Create output directories if they do not exist
+  if (!dir.exists(processed_dir)) {
+    dir.create(processed_dir, recursive = TRUE)
+  }
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
 
   # Clean and deduplicate
   if (verbose) cat("Cleaning and deduplicating data...\n")

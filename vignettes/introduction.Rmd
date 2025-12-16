@@ -1,0 +1,255 @@
+---
+title: "Introduction to GULNcoastal"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to GULNcoastal}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(GULNcoastal)
+```
+
+## What is GULNcoastal?
+
+**GULNcoastal** is an R package for analyzing coastal topography data from Gulf Coast Network park units (GUIS and PAIS). It provides tools for:
+
+- **Importing and cleaning** beach transect elevation data
+- **Calculating cross-sectional area** (Area Under Curve, AUC) as a proxy for sediment volume
+- **Quantifying uncertainty** using probability-weighted methods
+- **Visualizing temporal changes** in beach profiles
+
+The package automates the complete analysis workflow while providing flexibility for custom processing when needed.
+
+## Key Concepts
+
+### Beach Transects
+
+A **transect** is a cross-shore line along which elevation measurements are taken at regular intervals. Each measurement consists of:
+
+- `distance` - Distance from origin point (meters)
+- `elevation` - Height above NAVD88 datum (meters)
+- `transect` - Transect identifier
+- `year` - Survey year
+- `park` - Park code (GUIS or PAIS)
+
+### Area Under Curve (AUC)
+
+The **AUC** represents the cross-sectional area of beach profile above sea level (NAVD88 datum = 0). Changes in AUC over time indicate:
+
+- **Positive change** - Beach accretion (sediment gain)
+- **Negative change** - Beach erosion (sediment loss)
+
+### Uncertainty Quantification
+
+All measurements have inherent uncertainty from GPS/survey equipment. The package:
+
+- Assigns **year-specific accuracy values** (σ_h, σ_v) from accuracy tables
+- Propagates uncertainty through **zero-crossing detection**
+- Calculates **probability-weighted AUC** with confidence intervals
+- Reports uncertainty as standard deviation and percentage
+
+## Quick Start: Standard Workflow
+
+The simplest way to analyze transect data is with `run_transect_analysis()`:
+
+```{r standard-workflow}
+# Run complete automated analysis
+results <- run_transect_analysis(
+  data_dir = "data/raw/topo",           # Directory with CSV files
+  accuracy_table_path = "data/raw/accuracy_values.csv",
+  output_dir = "data/output",
+  save_results = TRUE,
+  verbose = TRUE
+)
+
+# Results contain:
+# - results$data: Complete processed data
+# - results$auc_results: AUC calculations by transect-year
+# - results$metadata: Processing information
+```
+
+### What This Does
+
+The function executes the complete pipeline:
+
+1. **Import** - Loads all CSV files from `data_dir`
+2. **Clean** - Removes extraneous negatives and duplicates
+3. **Assign Accuracy** - Adds measurement uncertainty from accuracy table
+4. **Find Zero Crossings** - Identifies where profiles cross sea level
+5. **Calculate Common Minimum** - Establishes consistent start point per transect
+6. **Calculate AUC** - Computes probability-weighted area with uncertainty
+7. **Export Results** - Saves RDS and park-specific CSV files
+
+## Understanding the Results
+
+### Data Structure
+
+The results list contains three components:
+
+```{r inspect-results}
+# Processed transect data with all points
+head(results$data)
+# Columns: transect, year, distance, elevation, park, point_type,
+#          sigma_h, sigma_v, uncertainty, confidence
+
+# AUC results by transect-year
+head(results$auc_results)
+# Columns: transect, year, auc, auc_upper, auc_lower, auc_sigma,
+#          auc_uncertainty_pct, overlap_m, overlap_pct, transect_length
+
+# Metadata about the analysis
+results$metadata
+```
+
+### Point Types
+
+The `point_type` column identifies data origin:
+
+- `measured` - Original survey measurements
+- `measured_zero` - Measured points within tolerance of elevation = 0
+- `interpolated` - Zero crossings within measured distance range
+- `extrapolated` - Zero crossings beyond measured distance range
+- `common_min` - Calculated common minimum distance point
+
+### Interpreting AUC Results
+
+```{r auc-interpretation}
+# Example AUC result for one transect-year
+# transect: "1"
+# year: 2017
+# auc: 450.23 (nominal probability-weighted area, m²)
+# auc_upper: 455.67 (95% CI upper bound, m²)
+# auc_lower: 444.89 (95% CI lower bound, m²)
+# auc_sigma: 2.75 (uncertainty standard deviation, m²)
+# auc_uncertainty_pct: 0.61 (relative uncertainty, %)
+# overlap_m: 185.4 (spatial overlap across years, m)
+# overlap_pct: 92.3 (percentage of transect with full overlap)
+```
+
+## Loading Previous Results
+
+If you've already run the analysis, load results from saved files:
+
+```{r load-results}
+# Load from RDS file
+results <- load_transect_results(
+  input_dir = "data/processed"
+)
+
+# Access the data
+transect_data <- results$data
+auc_data <- results$auc_results
+```
+
+## Next Steps
+
+Now that you understand the basics:
+
+- **Custom workflows** - See `vignette("custom-workflows")` for flexible data processing
+- **Data filtering** - See `vignette("filtering")` for advanced year selection
+- **Visualization** - See `vignette("plotting")` for creating transect plots
+- **Uncertainty** - See `vignette("uncertainty")` for accuracy table details
+
+## Simple Complete Example
+
+Here's a complete workflow from raw data to results:
+
+```{r complete-example}
+library(GULNcoastal)
+library(dplyr)
+
+# 1. Run analysis
+results <- run_transect_analysis(
+  data_dir = "data/raw/topo",
+  accuracy_table_path = "data/raw/accuracy_values.csv",
+  output_dir = "data/output",
+  verbose = TRUE
+)
+
+# 2. Examine summary statistics
+cat("Transects processed:", results$metadata$n_transects, "\n")
+cat("Years:", paste(results$metadata$years, collapse = ", "), "\n")
+cat("Parks:", paste(results$metadata$parks, collapse = ", "), "\n")
+
+# 3. Look at AUC results
+results$auc_results |>
+  group_by(park) |>
+  summarize(
+    mean_auc = mean(auc),
+    mean_uncertainty_pct = mean(auc_uncertainty_pct),
+    mean_overlap_pct = mean(overlap_pct)
+  )
+
+# 4. Find transects with highest uncertainty
+results$auc_results |>
+  arrange(desc(auc_uncertainty_pct)) |>
+  select(transect, year, auc, auc_uncertainty_pct, overlap_pct) |>
+  head(10)
+
+# 5. Export specific park data
+pais_data <- results$data |>
+  filter(park == "PAIS")
+
+readr::write_csv(pais_data, "output/pais_transects_custom.csv")
+```
+
+## Common Issues
+
+### Missing Accuracy Values
+
+**Error**: "Missing accuracy values for X observations"
+
+**Solution**: Ensure your accuracy table has entries for all park-year combinations in your data:
+
+```{r fix-accuracy}
+# Check which park-years are missing
+data |>
+  distinct(park, year) |>
+  anti_join(accuracy_table, by = c("park", "year"))
+
+# Add missing rows to accuracy table
+```
+
+### No Data Imported
+
+**Error**: "No data successfully imported"
+
+**Solution**: Check that CSV files have required columns:
+- `transect`, `year`, `distance`, `elevation`, `park`
+
+File names must contain "GUIS" or "PAIS" for park identification.
+
+## Getting Help
+
+```{r help}
+# Package overview
+?GULNcoastal
+
+# Function help
+?run_transect_analysis
+?import_transects_park
+?calculate_auc_with_uncertainty
+
+# List main functions
+# list_main_functions()  # Available in v0.2.0
+
+# Browse all vignettes
+browseVignettes("GULNcoastal")
+```
+
+## See Also
+
+- `vignette("custom-workflows")` - Multiple data sources, custom cleaning
+- `vignette("filtering")` - Year selectors and data filtering
+- `vignette("plotting")` - Visualization and plot configuration
+- `vignette("uncertainty")` - Accuracy tables and uncertainty propagation

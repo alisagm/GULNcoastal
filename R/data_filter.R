@@ -47,7 +47,7 @@
 #' )
 #' }
 #'
-#'  @seealso
+#' @seealso
 #' Year selectors: \code{\link{years_all}}, \code{\link{years_first}},
 #' \code{\link{years_recent}}, \code{\link{years_baseline_recent}},
 #' \code{\link{years_range}}, \code{\link{years_explicit}}

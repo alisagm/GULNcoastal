@@ -1,0 +1,440 @@
+---
+title: "Data Filtering"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Data Filtering}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(GULNcoastal)
+library(dplyr)
+```
+
+## Overview
+
+The GULNcoastal package uses a **semantic filtering system** for flexible data selection. Instead of hard-coding specific years, you describe *what* years you want (e.g., "first year plus last 2 years"), and the system resolves this independently for each park.
+
+**Why semantic filtering?**
+- Parks have different monitoring start dates (GUIS: 2018, PAIS: 2017)
+- Survey schedules vary by park and funding
+- You want baseline + recent comparisons without manual year lists
+- Filters remain valid as new data is added
+
+## Year Selectors
+
+**Year selectors** are functions that define selection logic applied to each park's available years.
+
+### Basic Selectors
+
+```{r basic-selectors}
+# Select all years
+years_all()
+
+# Select first N years per park
+years_first(1)      # Baseline year only
+years_first(2)      # First 2 years
+
+# Select last N years per park
+years_recent(1)     # Most recent year
+years_recent(2)     # Last 2 years
+years_recent(3)     # Last 3 years
+```
+
+### Baseline + Recent Pattern
+
+The most common pattern combines baseline with recent years:
+
+```{r baseline-recent}
+# First year + last N years (default for temporal plots)
+years_baseline_recent(2)    # Baseline + last 2 (default)
+years_baseline_recent(3)    # Baseline + last 3
+years_baseline_recent(1)    # Baseline + most recent
+```
+
+**Example resolution per park:**
+```r
+# PAIS years: [2017, 2019, 2021, 2023, 2025]
+# GUIS years: [2018, 2022, 2024]
+
+years_baseline_recent(2)
+# PAIS → [2017, 2023, 2025]
+# GUIS → [2018, 2022, 2024]
+# Result: [2017, 2018, 2022, 2023, 2024, 2025]
+```
+
+### Range and Conditional Selectors
+
+```{r range-selectors}
+# Select years within range (inclusive)
+years_range(2020, 2024)
+
+# Select years from specified year onward
+years_since(2020)
+
+# Select years up to specified year
+years_until(2022)
+```
+
+### Comparison Selectors
+
+```{r comparison-selectors}
+# First and last year only (temporal endpoints)
+years_compare_endpoints()
+
+# Equivalent to:
+# PAIS → [2017, 2025]
+# GUIS → [2018, 2024]
+```
+
+### Explicit Selection
+
+```{r explicit-selection}
+# Specify exact years
+years_explicit(2018, 2022, 2024)
+
+# Only these years will be selected (if available)
+# Missing years are silently skipped per park
+```
+
+### Combining Selectors
+
+```{r combine-selectors}
+# Combine multiple selection strategies (union)
+years_combine(
+  years_first(1),        # Baseline year
+  years_since(2020)      # Plus all years since 2020
+)
+
+# Example:
+# PAIS [2017, 2019, 2021, 2023, 2025]
+# → [2017] ∪ [2021, 2023, 2025]
+# → [2017, 2021, 2023, 2025]
+```
+
+## Listing Available Selectors
+
+Use `list_year_selectors()` to see all options:
+
+```{r list-selectors}
+# Print formatted list
+list_year_selectors()
+
+# Get as data frame for programmatic use
+selectors_df <- list_year_selectors(as_df = TRUE)
+print(selectors_df)
+```
+
+## Previewing Year Selection
+
+Before running analysis, preview which years will be selected:
+
+```{r preview-selection}
+# Load data first
+results <- load_transect_results(input_dir = "data/processed")
+
+# Preview baseline + recent 2
+preview_year_selection(years_baseline_recent(2), results$data)
+
+# Compare different selectors
+preview_year_selection(years_recent(3), results$data)
+preview_year_selection(years_compare_endpoints(), results$data)
+preview_year_selection(years_since(2020), results$data)
+```
+
+**Output shows:**
+- Years selected per park
+- Combined result (union across parks)
+- Count of selected years
+
+## Data Filters
+
+**Data filters** combine year selection with park and transect filtering.
+
+### Creating Data Filters
+
+```{r create-filters}
+# Basic filter with year selector
+filter1 <- create_data_filter(
+  year_selector = years_baseline_recent(2)
+)
+
+# Filter specific park(s)
+filter2 <- create_data_filter(
+  year_selector = years_recent(3),
+  parks = "GUIS"
+)
+
+# Filter multiple parks
+filter3 <- create_data_filter(
+  year_selector = years_all(),
+  parks = c("GUIS", "PAIS")
+)
+
+# Exclude specific transects
+filter4 <- create_data_filter(
+  year_selector = years_baseline_recent(2),
+  exclude_transects = c("1", "5")
+)
+```
+
+### Chainable Filter API
+
+Build filters step-by-step using pipes:
+
+```{r chainable-filters}
+# Build filter incrementally
+my_filter <- create_data_filter() |>
+  set_years(years_baseline_recent(3)) |>
+  set_parks("PAIS") |>
+  exclude_transects(c("damaged_transect_id")) |>
+  set_name("pais_baseline_3yr")
+
+# Or all at once
+my_filter <- create_data_filter(
+  year_selector = years_baseline_recent(3),
+  parks = "PAIS",
+  exclude_transects = c("damaged_transect_id"),
+  name = "pais_baseline_3yr"
+)
+```
+
+### Applying Data Filters
+
+```{r apply-filters}
+# Load data
+results <- load_transect_results("data/processed")
+
+# Create filter
+my_filter <- create_data_filter(
+  year_selector = years_recent(2),
+  parks = "GUIS"
+)
+
+# Apply filter to data
+filtered_data <- apply_filter(results$data, my_filter)
+
+# Check what was selected
+unique(filtered_data$park)   # Should be "GUIS" only
+unique(filtered_data$year)   # Should be last 2 GUIS years
+```
+
+## Common Filtering Patterns
+
+### Pattern 1: Temporal Comparison (Default)
+
+Compare baseline with recent conditions:
+
+```{r pattern-temporal}
+# First year + last 2 years per park
+filter <- create_data_filter(
+  year_selector = years_baseline_recent(2)
+)
+
+# Use in visualization or analysis
+# This is the default for most plotting functions
+```
+
+### Pattern 2: Recent Trends Only
+
+Focus on recent years across all parks:
+
+```{r pattern-recent}
+# Last 3 years per park
+filter <- create_data_filter(
+  year_selector = years_recent(3)
+)
+```
+
+### Pattern 3: Single Park Analysis
+
+Analyze one park with full timeline:
+
+```{r pattern-single-park}
+# All PAIS data
+filter <- create_data_filter(
+  year_selector = years_all(),
+  parks = "PAIS",
+  name = "pais_complete"
+)
+
+# GUIS since 2020
+filter <- create_data_filter(
+  year_selector = years_since(2020),
+  parks = "GUIS",
+  name = "guis_recent"
+)
+```
+
+### Pattern 4: Specific Time Period
+
+Extract a specific time window:
+
+```{r pattern-timewindow}
+# 2020-2024 only
+filter <- create_data_filter(
+  year_selector = years_range(2020, 2024),
+  name = "2020_2024_window"
+)
+```
+
+### Pattern 5: Custom Year Sets
+
+Select specific years of interest:
+
+```{r pattern-custom-years}
+# Pre-hurricane vs post-hurricane comparison
+filter <- create_data_filter(
+  year_selector = years_explicit(2017, 2019, 2023),
+  name = "hurricane_comparison"
+)
+```
+
+### Pattern 6: Endpoint Comparison
+
+Compare earliest and latest surveys only:
+
+```{r pattern-endpoints}
+# First and last year per park
+filter <- create_data_filter(
+  year_selector = years_compare_endpoints(),
+  name = "max_temporal_range"
+)
+```
+
+## Park-Aware Year Selection
+
+Year selectors automatically handle per-park differences:
+
+```{r park-aware-example}
+# Dataset has:
+# PAIS: 2017, 2019, 2021, 2023, 2025
+# GUIS: 2018, 2022, 2024
+
+# Request: baseline + last 2 years
+selector <- years_baseline_recent(2)
+
+# Resolution:
+# PAIS → [2017 (baseline), 2023, 2025 (last 2)]
+# GUIS → [2018 (baseline), 2022, 2024 (last 2)]
+# Combined → [2017, 2018, 2022, 2023, 2024, 2025]
+
+# This maintains scientific validity:
+# - Each park's temporal comparison is correct
+# - Baseline is earliest year for each park
+# - Recent years are most recent for each park
+```
+
+## Advanced: Programmatic Filtering
+
+Create filters dynamically based on data:
+
+```{r programmatic-filtering}
+# Load data
+results <- load_transect_results("data/processed")
+
+# Find parks with data
+available_parks <- unique(results$data$park)
+
+# Find year range
+year_range <- range(results$data$year)
+
+# Create filter for each park
+filters <- lapply(available_parks, function(p) {
+  create_data_filter(
+    year_selector = years_baseline_recent(2),
+    parks = p,
+    name = paste0(p, "_baseline_recent")
+  )
+})
+
+# Apply filters and combine
+filtered_data <- lapply(filters, function(f) {
+  apply_filter(results$data, f)
+}) |>
+  bind_rows()
+```
+
+## Using Filters with Plotting
+
+Filters integrate seamlessly with the plotting system:
+
+```{r filters-with-plots}
+# Create custom filter
+my_filter <- create_data_filter(
+  year_selector = years_baseline_recent(3),
+  parks = "PAIS"
+)
+
+# Use in plot configuration
+config <- create_plot_config(
+  data_filter = my_filter,
+  show_auc = TRUE,
+  show_inset = TRUE
+)
+
+# Apply configuration to create plots
+# (See vignette("plotting") for details)
+```
+
+## Validating Filters
+
+Check if a filter will produce data:
+
+```{r validate-filter}
+# Create filter
+my_filter <- create_data_filter(
+  year_selector = years_since(2023),
+  parks = "GUIS"
+)
+
+# Apply and check result
+filtered_data <- apply_filter(results$data, my_filter)
+
+if (nrow(filtered_data) == 0) {
+  cat("Warning: Filter returned no data\n")
+  cat("Available GUIS years:",
+      paste(sort(unique(results$data$year[results$data$park == "GUIS"])),
+            collapse = ", "), "\n")
+}
+```
+
+## Summary of Year Selectors
+
+| Function | Description | Example Use |
+|----------|-------------|-------------|
+| `years_all()` | All years | Complete timeline |
+| `years_first(n)` | First N years | Baseline period |
+| `years_recent(n)` | Last N years | Current conditions |
+| `years_baseline_recent(n)` | First + last N | **Default temporal comparison** |
+| `years_range(from, to)` | Years in range | Specific period |
+| `years_since(year)` | From year onward | Recent trends |
+| `years_until(year)` | Up to year | Historical analysis |
+| `years_explicit(...)` | Exact years | Custom selection |
+| `years_compare_endpoints()` | First + last | Maximum temporal range |
+| `years_combine(...)` | Union of selectors | Complex patterns |
+
+## Best Practices
+
+1. **Use semantic selectors** instead of hard-coded years for maintainability
+2. **Preview selections** before running full analysis
+3. **Name your filters** for clarity in complex workflows
+4. **Document filter logic** when creating custom patterns
+5. **Validate results** after filtering to ensure expected data
+
+## See Also
+
+- `vignette("introduction")` - Package basics and standard workflow
+- `vignette("plotting")` - Using filters with visualization
+- `vignette("custom-workflows")` - Advanced data manipulation
+- `?create_data_filter` - Complete filter documentation
+- `?list_year_selectors` - Interactive selector discovery

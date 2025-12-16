@@ -1,0 +1,530 @@
+---
+title: "Plot Configuration"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Plot Configuration}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(GULNcoastal)
+library(dplyr)
+```
+
+## Overview
+
+The GULNcoastal package provides a flexible plotting system for visualizing beach transect profiles. You can use **preset configurations** for common scenarios or create **custom configurations** for specific needs.
+
+## Quick Start: Preset Configurations
+
+The package includes four preset configurations optimized for different use cases.
+
+### config_quick() - Rapid Exploration
+
+Fast rendering for interactive data exploration:
+
+```{r config-quick}
+# Most recent year only
+config <- config_quick()
+
+# Last 2 years with uncertainty bands
+config <- config_quick(n_years = 2, show_uncertainty = TRUE)
+
+# Generate plots
+plot_transect(data, config = config)
+```
+
+**Features:**
+- Lower resolution (150 DPI) for speed
+- Minimal visual elements
+- Perfect for quick data checks
+
+### config_automated_full() - Complete Analysis
+
+All features enabled for comprehensive reporting:
+
+```{r config-full}
+# All transects, all years, all features
+config <- config_automated_full()
+
+# Apply to data
+results <- load_transect_results("data/processed")
+plots <- apply_config(results$data, config)
+```
+
+**Features:**
+- All available data
+- Uncertainty visualization
+- AUC calculations and shading
+- Inset plots showing full context
+- High resolution (300 DPI)
+
+### config_temporal() - Baseline Comparison
+
+Compare baseline conditions with recent surveys:
+
+```{r config-temporal}
+# First year + last 2 years (default)
+config <- config_temporal()
+
+# First year + last 3 years
+config <- config_temporal(n_recent = 3)
+```
+
+**Features:**
+- Automatic baseline selection (first year per park)
+- Clean temporal comparison
+- Highlights change over time
+
+### config_annual() - Year-over-Year Progression
+
+Create separate plot sets for each survey year:
+
+```{r config-annual}
+# Load data
+results <- load_transect_results("data/processed")
+
+# Create annual config
+config <- config_annual(results$data)
+
+# Each year gets:
+# - Baseline (first year)
+# - Previous year (if available)
+# - Target year
+```
+
+**Output structure:**
+```
+plots/annual/
+├── 2017/
+│   └── transect_plots/
+├── 2019/
+│   └── transect_plots/
+└── 2025/
+    └── transect_plots/
+```
+
+## Creating Custom Configurations
+
+Build configurations from scratch with `create_plot_config()`:
+
+```{r custom-config}
+# Create custom configuration
+my_config <- create_plot_config(
+  name = "my_analysis",
+  data_filter = create_data_filter(
+    year_selector = years_baseline_recent(2),
+    parks = "PAIS"
+  ),
+  show_auc = TRUE,
+  shade_area = TRUE,
+  show_inset = TRUE,
+  show_uncertainty_bands = TRUE,
+  file_format = "pdf",
+  dpi = 300
+)
+```
+
+### Key Configuration Parameters
+
+#### Data Selection
+
+```{r config-data-selection}
+# Filter which data to plot
+data_filter = create_data_filter(
+  year_selector = years_recent(2),
+  parks = "GUIS",
+  exclude_transects = c("damaged_id")
+)
+```
+
+#### Visual Elements
+
+```{r config-visual-elements}
+# Control what's shown on plots
+show_auc = TRUE                    # Show AUC values
+shade_area = TRUE                  # Shade area under curve
+show_inset = TRUE                  # Small overview inset
+show_auc_text = TRUE               # AUC numeric labels
+show_uncertainty_bands = TRUE      # Elevation uncertainty bands
+show_auc_uncertainty = TRUE        # AUC uncertainty bars
+show_point_uncertainty = FALSE     # Individual point error bars
+show_integration_boundaries = FALSE # Show zero crossings
+```
+
+#### Axis and Limits
+
+```{r config-axes}
+# Axis scaling options
+axis_limits = "park"       # Per-park consistent limits
+axis_limits = "transect"   # Per-transect optimized limits
+axis_limits = "global"     # Same limits for all plots
+```
+
+#### Output Format
+
+```{r config-output}
+# File output settings
+file_format = "png"        # png, pdf, jpg
+dpi = 300                  # Resolution
+width = 10                 # Width in inches
+height = 6                 # Height in inches
+```
+
+## Modifying Existing Configurations
+
+Customize presets with `modify_config()`:
+
+```{r modify-config}
+# Start with preset
+base_config <- config_temporal()
+
+# Modify specific settings
+custom_config <- modify_config(
+  base_config,
+  show_uncertainty_bands = TRUE,
+  file_format = "pdf",
+  dpi = 600
+)
+```
+
+## Themes and Colors
+
+### Available Themes
+
+```{r list-themes}
+# See available plot themes
+list_themes()
+
+# Themes include:
+# - "guln" (default)
+# - "minimal"
+# - "publication"
+# - "presentation"
+```
+
+### Using Themes
+
+```{r use-theme}
+# Set theme in configuration
+config <- create_plot_config(
+  theme = "publication",
+  ...
+)
+
+# Or apply directly
+plot_theme <- get_plot_theme("minimal")
+```
+
+### Color Palettes
+
+```{r color-palettes}
+# See available color palettes
+list_palettes()
+
+# Available palettes:
+# - "temporal" (default, colorblind-friendly)
+# - "viridis"
+# - "park_specific"
+# - "monochrome"
+
+# Use in configuration
+config <- create_plot_config(
+  color_palette = "viridis",
+  ...
+)
+
+# Get colors directly
+colors <- get_color_palette("temporal", n = 5)
+```
+
+## Batch Processing
+
+### Generate Plots for All Transects
+
+```{r batch-all-transects}
+# Load data
+results <- load_transect_results("data/processed")
+
+# Create configuration
+config <- config_temporal()
+
+# Apply to all transects
+all_plots <- apply_config(results$data, config)
+
+# Plots are automatically saved to output directory
+```
+
+### Generate Plots by Park
+
+```{r batch-by-park}
+# PAIS only
+config_pais <- create_plot_config(
+  data_filter = create_data_filter(
+    year_selector = years_all(),
+    parks = "PAIS"
+  )
+)
+
+pais_plots <- apply_config(results$data, config_pais)
+
+# GUIS only
+config_guis <- create_plot_config(
+  data_filter = create_data_filter(
+    year_selector = years_all(),
+    parks = "GUIS"
+  )
+)
+
+guis_plots <- apply_config(results$data, config_guis)
+```
+
+### Custom Output Directories
+
+```{r custom-output}
+# Specify output location
+config <- create_plot_config(
+  name = "custom_analysis",
+  output_dir = "reports/figures/transects",
+  ...
+)
+```
+
+## Individual Plot Creation
+
+Create single plots with `plot_transect()`:
+
+```{r single-plot}
+# Plot single transect
+transect_data <- results$data |>
+  filter(transect == "1")
+
+plot <- plot_transect(
+  transect_data,
+  show_auc = TRUE,
+  shade_area = TRUE,
+  show_inset = TRUE
+)
+
+# Save manually if needed
+ggsave("output/transect_1.png", plot, width = 10, height = 6, dpi = 300)
+```
+
+## Advanced Customization
+
+### Custom Axis Limits
+
+```{r custom-axis-limits}
+# Specify exact limits
+config <- create_plot_config(
+  axis_limits = "custom",
+  xlim = c(0, 200),
+  ylim = c(-2, 8)
+)
+```
+
+### Uncertainty Visualization
+
+```{r uncertainty-viz}
+# Full uncertainty display
+config <- create_plot_config(
+  show_uncertainty_bands = TRUE,      # Elevation bands
+  show_auc_uncertainty = TRUE,        # AUC error bars
+  show_point_uncertainty = TRUE,      # Point error bars
+  uncertainty_alpha = 0.3,            # Transparency
+  uncertainty_color = "gray70"        # Color
+)
+
+# Minimal uncertainty (cleaner plots)
+config <- create_plot_config(
+  show_uncertainty_bands = FALSE,
+  show_auc_uncertainty = TRUE,
+  show_point_uncertainty = FALSE
+)
+```
+
+### Integration Boundaries
+
+Show zero-crossing points and common minimum:
+
+```{r integration-boundaries}
+config <- create_plot_config(
+  show_integration_boundaries = TRUE,
+  boundary_color = "red",
+  boundary_alpha = 0.6
+)
+```
+
+## Validation
+
+Validate configuration before running:
+
+```{r validate-config}
+# Check configuration is valid
+config <- create_plot_config(
+  name = "test",
+  data_filter = create_data_filter(years_recent(2))
+)
+
+# Validation happens automatically
+# Invalid settings will throw informative errors
+
+# Preview what will be plotted
+results <- load_transect_results("data/processed")
+preview_year_selection(
+  config$data_filter$year_selector,
+  results$data
+)
+```
+
+## Common Patterns
+
+### Pattern 1: Quick Check
+
+```{r pattern-quick-check}
+# Fast exploration of recent data
+config <- config_quick(n_years = 1)
+apply_config(data, config)
+```
+
+### Pattern 2: Publication Figures
+
+```{r pattern-publication}
+# High-quality figures for reports
+config <- create_plot_config(
+  data_filter = create_data_filter(years_baseline_recent(2)),
+  file_format = "pdf",
+  dpi = 600,
+  width = 12,
+  height = 7,
+  theme = "publication",
+  show_auc = TRUE,
+  show_uncertainty_bands = TRUE
+)
+```
+
+### Pattern 3: Presentation Slides
+
+```{r pattern-presentation}
+# Simplified plots for presentations
+config <- create_plot_config(
+  data_filter = create_data_filter(years_compare_endpoints()),
+  theme = "presentation",
+  show_auc = TRUE,
+  show_auc_text = TRUE,
+  show_uncertainty_bands = FALSE,
+  file_format = "png",
+  dpi = 150,
+  width = 10,
+  height = 6
+)
+```
+
+### Pattern 4: Detailed Analysis
+
+```{r pattern-detailed}
+# All information for technical review
+config <- create_plot_config(
+  data_filter = create_data_filter(years_all()),
+  show_auc = TRUE,
+  shade_area = TRUE,
+  show_inset = TRUE,
+  show_uncertainty_bands = TRUE,
+  show_auc_uncertainty = TRUE,
+  show_point_uncertainty = TRUE,
+  show_integration_boundaries = TRUE,
+  file_format = "pdf",
+  dpi = 300
+)
+```
+
+## Output Organization
+
+Default output structure:
+
+```
+output_dir/
+├── GUIS/
+│   └── plots/
+│       └── transects/
+│           ├── transect_1.png
+│           ├── transect_2.png
+│           └── ...
+└── PAIS/
+    └── plots/
+        └── transects/
+            ├── transect_1.png
+            ├── transect_2.png
+            └── ...
+```
+
+Annual mode adds year subdirectories:
+
+```
+output_dir/
+└── plots/
+    └── annual/
+        ├── 2017/
+        │   └── transect_plots/
+        ├── 2019/
+        │   └── transect_plots/
+        └── ...
+```
+
+## Tips and Best Practices
+
+1. **Start with presets** - Use `config_quick()` for exploration, then customize
+2. **Preview selections** - Use `preview_year_selection()` before batch processing
+3. **Test on subset** - Run on single transect before generating all plots
+4. **Name configurations** - Use descriptive names for reproducibility
+5. **Match format to use** - PNG for web, PDF for print, JPG for archival
+6. **Consider file size** - Lower DPI for draft plots saves time and disk space
+
+## Troubleshooting
+
+### No Plots Generated
+
+```{r troubleshoot-no-plots}
+# Check data filter
+results <- load_transect_results("data/processed")
+filtered_data <- apply_filter(results$data, config$data_filter)
+nrow(filtered_data)  # Should be > 0
+
+# Check year selection
+preview_year_selection(
+  config$data_filter$year_selector,
+  results$data
+)
+```
+
+### Plots Look Strange
+
+```{r troubleshoot-appearance}
+# Check axis limits
+config$axis_limits  # Should be "park", "transect", or "global"
+
+# Check if data is reasonable
+summary(filtered_data$elevation)
+summary(filtered_data$distance)
+
+# Try different theme
+config <- modify_config(config, theme = "minimal")
+```
+
+## See Also
+
+- `vignette("introduction")` - Package basics
+- `vignette("filtering")` - Year selectors and data filters
+- `vignette("custom-workflows")` - Advanced data processing
+- `?create_plot_config` - Complete configuration options
+- `?plot_transect` - Individual plot creation
+- `?apply_config` - Batch processing

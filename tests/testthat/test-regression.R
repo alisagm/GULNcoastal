@@ -9,24 +9,24 @@ test_that("import_profile_transects reads valid CSV correctly", {
 })
 
 # ZEROCROSSING
-test_that("identify_zero_points_all_transects matches validated output", {
+test_that("find_zero_crossings matches validated output", {
 
 
   input <- readRDS(test_path("testdata", "05_accuracy.rds"))
   expected <- readRDS(test_path("testdata", "06_zeropts.rds"))
 
-  result <- identify_zero_points_all_transects(input)
+  result <- find_zero_crossings(input)
 
   expect_equal(result, expected)
 })
 
 # COMMON MIN
-test_that("calculate_and_interpolate_common_min matches validated output", {
+test_that("calculate_common_min matches validated output", {
 
   input <- readRDS(test_path("testdata", "08_with0s.rds"))
   expected <- readRDS(test_path("testdata", "09_commonmins.rds"))
 
-  result <- calculate_and_interpolate_common_min(input)
+  result <- calculate_common_min(input)
 
   expect_equal(result, expected)
 })

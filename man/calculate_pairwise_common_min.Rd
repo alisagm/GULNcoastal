@@ -17,10 +17,10 @@ calculate_pairwise_common_min(data, year1, year2, verbose = FALSE)
 }
 \value{
 Tibble of common_min points with same structure as
-  \code{calculate_and_interpolate_common_min}
+  \code{calculate_common_min}
 }
 \description{
-Similar to \code{calculate_and_interpolate_common_min}, but calculates
+Similar to \code{calculate_common_min}, but calculates
 the common minimum distance for only two specific years rather than all
 years for a transect.
 }

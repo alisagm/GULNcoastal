@@ -3,6 +3,8 @@
 # PAIRWISE TRANSECT ANALYSIS WORKFLOW
 # ============================================================================
 
+n# Suppress NSE warnings for dplyr pipeline variables
+utils::globalVariables(c("min_distance", "excluded_year"))
 #' Run Pairwise Transect Analysis for Non-Cross-Island Transects
 #'
 #' Executes pairwise transect analysis with year-specific common minimum
@@ -44,7 +46,7 @@
 #'   file containing transect-specific accuracy overrides. If NULL (default),
 #'   looks for "special_cases.csv" in \code{data_dir}. This file is optional.
 #' @param save_results Logical. If TRUE (default), saves results as RDS files
-#'   per park: {park_code}_pairwise_results.rds
+#'   per park: \{park_code\}_pairwise_results.rds
 #' @param verbose Logical. If TRUE, prints progress messages. Default FALSE.
 #'
 #' @return A list (returned invisibly) containing:
@@ -670,7 +672,7 @@ run_pairwise_analysis <- function(data_dir,
 
 #' Calculate Common Minimum for a Specific Pair of Years
 #'
-#' Similar to \code{calculate_and_interpolate_common_min}, but calculates
+#' Similar to \code{calculate_common_min}, but calculates
 #' the common minimum distance for only two specific years rather than all
 #' years for a transect.
 #'
@@ -679,7 +681,7 @@ run_pairwise_analysis <- function(data_dir,
 #' @param year2 Second year in the pair
 #' @param verbose Logical. If TRUE, print warnings for edge cases
 #' @return Tibble of common_min points with same structure as
-#'   \code{calculate_and_interpolate_common_min}
+#'   \code{calculate_common_min}
 #'
 #' @importFrom dplyr filter group_by summarise mutate inner_join group_split
 #'   first if_else tibble bind_rows

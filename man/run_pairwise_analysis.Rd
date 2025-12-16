@@ -34,7 +34,7 @@ file containing transect-specific accuracy overrides. If NULL (default),
 looks for "special_cases.csv" in \code{data_dir}. This file is optional.}
 
 \item{save_results}{Logical. If TRUE (default), saves results as RDS files
-per park: {park_code}_pairwise_results.rds}
+per park: \{park_code\}_pairwise_results.rds}
 
 \item{verbose}{Logical. If TRUE, prints progress messages. Default FALSE.}
 }

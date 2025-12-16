@@ -1,0 +1,521 @@
+---
+title: "Uncertainty Quantification"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Uncertainty Quantification}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(GULNcoastal)
+library(dplyr)
+```
+
+## Overview
+
+All coastal topography measurements have inherent uncertainty from GPS/survey equipment. The GULNcoastal package quantifies and propagates this uncertainty throughout the analysis pipeline to provide **probability-weighted Area Under Curve (AUC)** calculations with confidence intervals.
+
+**Key concept**: Ignoring measurement uncertainty can cause real coastal changes to be missed (up to 60-80% of actual changes may fall within measurement error).
+
+## Accuracy Tables
+
+### What is an Accuracy Table?
+
+An **accuracy table** specifies measurement uncertainty for each survey year and park. Accuracy varies by:
+
+- GPS/survey equipment used
+- Field procedures
+- Environmental conditions
+- Survey year (not location)
+
+### Accuracy Table Format
+
+CSV file with required columns:
+
+```csv
+park,year,sigma_h,sigma_v,accuracy_tier
+PAIS,2017,0.017,0.023,B_Good
+PAIS,2019,0.009,0.004,A_Excellent
+PAIS,2021,0.012,0.003,A_Excellent
+PAIS,2023,0.012,0.023,B_Good
+PAIS,2025,0.027,0.067,C_Moderate
+GUIS,2018,0.015,0.120,C_Moderate
+GUIS,2022,0.011,0.006,A_Excellent
+GUIS,2024,0.024,0.069,C_Moderate
+```
+
+**Column definitions:**
+
+- `park` - Park code (e.g., "GUIS", "PAIS")
+- `year` - Survey year
+- `sigma_h` - Horizontal measurement uncertainty (meters, 1σ)
+- `sigma_v` - Vertical measurement uncertainty (meters, 1σ)
+- `accuracy_tier` - Quality classification (A_Excellent, B_Good, C_Moderate)
+
+### Accuracy Tiers
+
+Tiers provide qualitative assessment of measurement quality:
+
+| Tier | σ_h Range | σ_v Range | Description |
+|------|-----------|-----------|-------------|
+| **A_Excellent** | < 0.015 m | < 0.010 m | Survey-grade GPS, optimal conditions |
+| **B_Good** | 0.015-0.025 m | 0.010-0.030 m | Good GPS, typical field conditions |
+| **C_Moderate** | > 0.025 m | > 0.030 m | Recreational GPS or challenging conditions |
+
+## Loading Accuracy Tables
+
+### Basic Loading
+
+```{r load-accuracy-basic}
+# Load from CSV file
+accuracy_table <- load_accuracy_table("data/raw/accuracy_values.csv")
+
+# View contents
+print(accuracy_table)
+```
+
+### Validation
+
+The package automatically validates accuracy tables:
+
+```{r validation}
+# Checks performed:
+# - Required columns present
+# - No NA values in park/year
+# - Positive sigma values
+# - No duplicate park/year combinations
+# - Warns about non-standard tiers
+
+# Validate custom table
+my_table <- data.frame(
+  park = c("PAIS", "GUIS"),
+  year = c(2020, 2020),
+  sigma_h = c(0.012, 0.015),
+  sigma_v = c(0.010, 0.008),
+  accuracy_tier = c("A_Excellent", "A_Excellent")
+)
+
+validate_accuracy_table(my_table)
+```
+
+### Usage in Analysis
+
+```{r use-accuracy}
+# Automatic loading (looks in data_dir)
+results <- run_transect_analysis(
+  data_dir = "data/raw/topo",
+  # Will look for "accuracy_values.csv" in data_dir
+  verbose = TRUE
+)
+
+# Explicit path
+results <- run_transect_analysis(
+  data_dir = "data/raw/topo",
+  accuracy_table_path = "config/custom_accuracy.csv",
+  verbose = TRUE
+)
+
+# Pre-loaded table (custom workflow)
+accuracy_table <- load_accuracy_table("accuracy_values.csv")
+data_with_accuracy <- assign_accuracy(
+  data,
+  accuracy_table = accuracy_table
+)
+```
+
+## Special Cases Tables
+
+### When to Use Special Cases
+
+Use **special cases** to override default accuracy for specific transects:
+
+- Known equipment malfunction
+- Unusual field conditions
+- Transect-specific issues
+- Higher uncertainty for damaged monuments
+
+### Special Cases Format
+
+```csv
+park,transect,year,sigma_h,sigma_v,notes
+PAIS,5,all,0.100,0.100,Rough terrain
+PAIS,12,2016,0.075,0.075,GPS malfunction
+GUIS,3,2018,0.050,0.150,Storm damage
+```
+
+**Special columns:**
+
+- `year` can be "all" to apply to all years for that transect
+- `notes` documents reason for override (recommended)
+
+### Loading Special Cases
+
+```{r load-special-cases}
+# Load special cases table
+special_cases <- load_special_cases_table("data/raw/special_cases.csv")
+
+# Use in analysis
+results <- run_transect_analysis(
+  data_dir = "data/raw/topo",
+  accuracy_table_path = "data/raw/accuracy_values.csv",
+  special_cases_path = "data/raw/special_cases.csv"
+)
+
+# Or custom workflow
+data_with_accuracy <- assign_accuracy(
+  data,
+  accuracy_table = accuracy_table,
+  special_cases = special_cases
+)
+```
+
+### Lookup Hierarchy
+
+Accuracy assignment follows this priority:
+
+1. **Special cases** (park + transect + year) - most specific
+2. **Accuracy table** (park + year) - general
+3. **Default values** - conservative fallback if no match
+
+```{r hierarchy-example}
+# Given:
+# - Accuracy table: PAIS/2019 → σ_h=0.009, σ_v=0.004
+# - Special case: PAIS/transect 5/2019 → σ_h=0.050, σ_v=0.050
+
+# Results:
+# - PAIS transect 1, 2019 → uses accuracy table (0.009, 0.004)
+# - PAIS transect 5, 2019 → uses special case (0.050, 0.050)
+```
+
+## Uncertainty Propagation
+
+### Measurement Uncertainty
+
+For each measured point, total uncertainty combines horizontal and vertical errors:
+
+$$\sigma_{total} = \sqrt{\sigma_v^2 + (\sigma_h \times |slope|)^2}$$
+
+```{r measurement-uncertainty}
+# Automatically calculated for all measured points
+data_classified <- add_measured_uncertainty(data_with_accuracy)
+
+# Results include:
+# - uncertainty: Total uncertainty (meters)
+# - confidence: "high", "moderate", or "low"
+# - slope: Local slope at measurement point
+```
+
+### Zero-Crossing Uncertainty
+
+Zero-crossing points (where elevation = 0) have uncertainty based on:
+
+- **Interpolated** - Function of bracketing point uncertainties
+- **Extrapolated** - Increases with extrapolation distance
+- **Measured zero** - Points within 1.96σ of elevation 0
+
+```{r zero-crossing-uncertainty}
+# Identify zero crossings with uncertainty
+zero_points <- find_zero_crossings(data_with_accuracy)
+
+# Each point includes:
+# - distance: Location of zero crossing
+# - uncertainty: Position uncertainty (meters)
+# - confidence: Quality classification
+# - point_type: "interpolated", "extrapolated", or "measured_zero"
+```
+
+### Confidence Classifications
+
+Points are classified by uncertainty magnitude:
+
+- **High confidence** - σ < 0.5 m (typical for good surveys)
+- **Moderate confidence** - 0.5 m ≤ σ < 1.0 m
+- **Low confidence** - σ ≥ 1.0 m (large extrapolations, poor equipment)
+
+## Probability-Weighted AUC
+
+### Why Probability Weighting?
+
+Traditional AUC calculation treats all zero-crossing points as exact. **Probability weighting** accounts for uncertainty by:
+
+1. Assigning probability distributions to near-zero points
+2. Calculating weighted elevation values
+3. Propagating uncertainty through integration
+4. Reporting confidence intervals
+
+### AUC Results Structure
+
+```{r auc-results}
+# AUC calculation includes uncertainty
+auc_results <- results$auc_results
+
+# Key columns:
+# - auc: Nominal probability-weighted AUC (m²)
+# - auc_upper: Upper 95% confidence bound (m²)
+# - auc_lower: Lower 95% confidence bound (m²)
+# - auc_sigma: Standard deviation (m²)
+# - auc_uncertainty_pct: Relative uncertainty (%)
+```
+
+### Interpreting AUC Uncertainty
+
+```{r interpret-auc}
+# Example result:
+# transect: "1", year: 2019
+# auc: 450.23 m²
+# auc_upper: 455.67 m² (+1.2%)
+# auc_lower: 444.89 m² (-1.2%)
+# auc_sigma: 2.75 m²
+# auc_uncertainty_pct: 0.61%
+
+# Interpretation:
+# - Nominal AUC is 450.23 m²
+# - 95% confidence: between 444.89 and 455.67 m²
+# - Relative uncertainty is 0.61% (very good)
+
+# Compare with another year:
+# transect: "1", year: 2025
+# auc: 465.10 m²
+# auc_upper: 472.34 m² (+1.6%)
+# auc_lower: 457.86 m² (-1.6%)
+
+# Change analysis:
+# - Nominal change: +14.87 m² (accretion)
+# - Uncertainty ranges overlap slightly
+# - Change is likely real but should be interpreted with caution
+```
+
+### Uncertainty Percentage
+
+The `auc_uncertainty_pct` provides quick assessment:
+
+- **< 1%** - Excellent precision, changes easily detected
+- **1-3%** - Good precision, moderate changes detectable
+- **3-5%** - Moderate precision, only large changes confidently detected
+- **> 5%** - High uncertainty, difficult to detect changes
+
+## Spatial Overlap
+
+### Why Overlap Matters
+
+Surveys at different times may have different spatial coverage. **Overlap** quantifies the shared distance range across survey years.
+
+```{r overlap-metrics}
+# Overlap metrics in AUC results:
+# - overlap_m: Shared distance (meters)
+# - overlap_pct: Percentage of transect length
+# - transect_length: Total measured length
+
+# Example:
+# overlap_m: 185.4 m
+# overlap_pct: 92.3%
+# transect_length: 200.8 m
+
+# Interpretation:
+# - 92.3% of transect has measurements in all years
+# - Only 7.7% measured in some years but not others
+# - High overlap → reliable temporal comparison
+```
+
+### Interpreting Overlap
+
+| Overlap % | Interpretation | Action |
+|-----------|----------------|--------|
+| > 90% | Excellent spatial consistency | Confident comparison |
+| 70-90% | Good overlap | Valid comparison with minor caveats |
+| 50-70% | Moderate overlap | Use caution in interpretation |
+| < 50% | Poor overlap | May not be directly comparable |
+
+### Low Overlap Scenarios
+
+```{r low-overlap-example}
+# Find transects with low overlap
+low_overlap <- results$auc_results |>
+  filter(overlap_pct < 70) |>
+  arrange(overlap_pct)
+
+# These transects may have:
+# - Shoreline migration (beach moved significantly)
+# - Different survey extents
+# - Monument damage/relocation
+# - Inaccessible areas in some years
+
+# Consider:
+# - Comparing only overlapping sections
+# - Using relative metrics (beach slope, profile shape)
+# - Narrative interpretation rather than numerical comparison
+```
+
+## Best Practices
+
+### Creating Accuracy Tables
+
+1. **Document equipment** - Record GPS model, settings, survey methods
+2. **Analyze survey reports** - Extract reported accuracy from field notes
+3. **Use conservative values** - When uncertain, overestimate error
+4. **Update regularly** - Add entries for each new survey
+5. **Include notes** - Document basis for sigma values
+
+### Example Accuracy Table Creation
+
+```{r create-accuracy-table}
+# Build accuracy table from survey metadata
+accuracy_table <- data.frame(
+  park = c("PAIS", "PAIS", "PAIS"),
+  year = c(2017, 2019, 2023),
+  sigma_h = c(0.017, 0.009, 0.012),  # From equipment specs
+  sigma_v = c(0.023, 0.004, 0.023),  # From field reports
+  accuracy_tier = c("B_Good", "A_Excellent", "B_Good")
+)
+
+# Validate before saving
+validate_accuracy_table(accuracy_table)
+
+# Save to CSV
+readr::write_csv(accuracy_table, "data/accuracy_values.csv")
+```
+
+### Assigning Accuracy Tiers
+
+```{r assign-tiers}
+# Guidelines for tier assignment:
+
+# Tier A (Excellent): σ_h < 0.015 m, σ_v < 0.010 m
+# - Survey-grade GPS (e.g., Trimble R10, Leica GS18)
+# - RTK or PPK corrections
+# - Optimal conditions (open sky, calm weather)
+# - Experienced surveyor
+
+# Tier B (Good): σ_h 0.015-0.025 m, σ_v 0.010-0.030 m
+# - Professional GPS (e.g., Trimble GeoXH, Leica CS20)
+# - SBAS corrections
+# - Typical field conditions
+# - Standard procedures
+
+# Tier C (Moderate): σ_h > 0.025 m, σ_v > 0.030 m
+# - Consumer/recreational GPS
+# - No differential correction
+# - Challenging conditions (vegetation, storms)
+# - Legacy data with unknown accuracy
+```
+
+### Interpreting Results
+
+```{r interpret-results}
+# Check uncertainty distribution
+summary(results$auc_results$auc_uncertainty_pct)
+
+# Identify high-uncertainty transects
+high_uncertainty <- results$auc_results |>
+  filter(auc_uncertainty_pct > 3) |>
+  select(transect, year, auc, auc_uncertainty_pct, overlap_pct)
+
+# For these transects:
+# - Review field notes for issues
+# - Check special cases applicability
+# - Consider qualitative rather than quantitative comparisons
+# - Focus on multi-year trends rather than year-to-year changes
+```
+
+## Common Issues
+
+### Missing Accuracy Values
+
+**Problem**: "Missing accuracy values for X observations"
+
+```{r fix-missing-accuracy}
+# Find which park/year combinations are missing
+data |>
+  distinct(park, year) |>
+  anti_join(accuracy_table, by = c("park", "year"))
+
+# Add missing entries to accuracy table
+new_entries <- data.frame(
+  park = "PAIS",
+  year = 2025,
+  sigma_h = 0.027,  # Use equipment specs or conservative estimate
+  sigma_v = 0.067,
+  accuracy_tier = "C_Moderate"
+)
+
+accuracy_table <- bind_rows(accuracy_table, new_entries)
+```
+
+### High Uncertainty
+
+**Problem**: AUC uncertainty > 5%
+
+```{r fix-high-uncertainty}
+# Investigate causes:
+# 1. Check accuracy values (are they realistic?)
+# 2. Review field notes (equipment issues?)
+# 3. Check overlap percentage (poor spatial coverage?)
+# 4. Consider special cases (transect-specific problems?)
+
+# If uncertainty is real:
+# - Report with appropriate caveats
+# - Focus on trends across multiple years
+# - Consider additional field validation
+```
+
+## Advanced Topics
+
+### Custom Uncertainty Calculations
+
+```{r custom-uncertainty}
+# Calculate uncertainty for specific scenarios
+data_with_uncertainty <- data |>
+  mutate(
+    # Custom uncertainty based on your criteria
+    custom_sigma_h = case_when(
+      year < 2015 ~ 0.050,  # Conservative for old surveys
+      year >= 2020 ~ 0.010, # Modern equipment
+      TRUE ~ 0.025          # Intermediate period
+    )
+  )
+```
+
+### Uncertainty Visualization
+
+```{r visualize-uncertainty}
+# Plot uncertainty distribution
+library(ggplot2)
+
+results$auc_results |>
+  ggplot(aes(x = auc_uncertainty_pct)) +
+  geom_histogram(bins = 30) +
+  labs(
+    title = "AUC Uncertainty Distribution",
+    x = "Uncertainty (%)",
+    y = "Count"
+  )
+
+# Uncertainty by park
+results$auc_results |>
+  left_join(results$data |> distinct(transect, year, park),
+            by = c("transect", "year")) |>
+  ggplot(aes(x = park, y = auc_uncertainty_pct)) +
+  geom_boxplot() +
+  labs(
+    title = "AUC Uncertainty by Park",
+    x = "Park",
+    y = "Uncertainty (%)"
+  )
+```
+
+## See Also
+
+- `vignette("introduction")` - Package basics and workflow
+- `vignette("custom-workflows")` - Advanced data processing
+- `?load_accuracy_table` - Accuracy table documentation
+- `?assign_accuracy` - Accuracy assignment details
+- `?calculate_auc_with_uncertainty` - AUC calculation internals

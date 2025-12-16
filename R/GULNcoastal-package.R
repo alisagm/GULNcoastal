@@ -77,7 +77,7 @@ NULL
 #'   \item \code{\link{remove_negatives}()} - Clean extraneous negative elevations
 #'   \item \code{\link{assign_accuracy}()} - Assign measurement uncertainty
 #'   \item \code{\link{find_zero_crossings}()} - Identify zero-elevation points
-#'   \item \code{\link{calculate_common_minimum}()} - Common minimum distance
+#'   \item \code{\link{calculate_common_min}()} - Common minimum distance
 #'   \item \code{\link{calculate_auc_with_uncertainty}()} - Probability-weighted AUC
 #' }
 #'

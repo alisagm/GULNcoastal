@@ -6,3 +6,4 @@
 ^\.gitignore$
 ^doc$
 ^Meta$
+^design_updates\.md$
