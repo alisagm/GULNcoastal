@@ -5,3 +5,5 @@
 *.Rproj
 /doc/
 /Meta/
+.claude/
+design_updates.md
