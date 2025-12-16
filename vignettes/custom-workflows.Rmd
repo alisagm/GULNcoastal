@@ -1,0 +1,610 @@
+---
+title: "Custom Workflows"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Custom Workflows}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(GULNcoastal)
+library(dplyr)
+library(stringr)
+```
+
+## Introduction
+
+The GULNcoastal package supports two main workflows:
+
+**Standard Workflow** (for most users):
+- Use `run_transect_analysis()` with file paths
+- Automatic import, cleaning, and analysis
+- Works great when data is already in the correct format
+
+**Custom Workflow** (this vignette):
+- Use `run_transect_analysis_data()` with pre-loaded data frames
+- Full control over import and cleaning
+- Essential when you need flexibility
+
+### When to Use Custom Workflows
+
+Choose a custom workflow when you need to:
+
+1. **Combine data from multiple sources** - Different files, different formats
+2. **Fix data issues before analysis** - Typos, naming inconsistencies, missing values
+3. **Apply custom data cleaning** - Transect-specific processing, outlier removal
+4. **Use non-standard file formats** - Excel files, database exports, API data
+5. **Debug individual pipeline steps** - Inspect intermediate results, troubleshoot issues
+6. **Create specialized accuracy tables** - Park-specific or transect-specific uncertainty values
+
+If your data is a single CSV file in the standard format with no issues, use `run_transect_analysis()` instead.
+
+## Pattern 1: Multiple Data Sources
+
+This is the most common reason to use a custom workflow. You have data from different sources that need to be combined before analysis.
+
+### Real-World Example: Combining LiDAR and Traditional Survey Data
+
+This example is based on an actual PAIS analysis that combined historical DEM point samples with new topographic survey data.
+
+```{r multiple-sources}
+# Import data from two different sources
+lidar_data <- import_transects_park(
+  here::here("data", "raw", "paisDemPtSamplesOnTopoTrans09_12_16b.csv")
+)
+
+survey_data <- import_transects_park(
+  here::here("data", "raw", "topo", "topoTransectPAIS2025_2.csv")
+)
+
+# Inspect to understand differences
+str(lidar_data)
+str(survey_data)
+
+# Combine the datasets
+# Here we only want specific years from the survey data
+combined_data <- bind_rows(
+  lidar_data,
+  survey_data |> filter(year %in% c(2017, 2025))
+)
+
+# Run analysis on combined data
+results <- run_transect_analysis_data(
+  data = combined_data,
+  accuracy_table = here::here("data", "raw", "accuracy_values.csv"),
+  save_results = TRUE,
+  verbose = TRUE
+)
+```
+
+**Key Point:** The standard `run_transect_analysis()` can only handle data from a single directory. When you need to combine sources, use `run_transect_analysis_data()`.
+
+## Pattern 2: Fixing Data Issues
+
+Real-world data often has issues that need correction before analysis. Custom workflows let you fix these problems explicitly.
+
+### Example: Correcting Year Typos and Standardizing Names
+
+```{r fix-data-issues}
+# Import data
+data <- import_transects_park(
+  here::here("data", "raw", "topo", "topoTransectPAIS2020.csv")
+)
+
+# Fix a year typo (2017 was incorrectly entered as 2016)
+data$year[data$year == 2017] <- 2016
+
+# Standardize transect naming
+# Remove "t0" prefix (e.g., "t001" -> "1", "t012" -> "12")
+data <- data |>
+  mutate(
+    transect = str_remove(transect, "^t0*") |> factor()
+  )
+
+# Verify the fix
+table(data$year)  # Should not show 2017
+head(unique(data$transect))  # Should show "1", "2", etc.
+
+# Now run analysis with clean data
+results <- run_transect_analysis_data(
+  data = data,
+  accuracy_table = "accuracy_values.csv"
+)
+```
+
+### Common Data Issues to Fix
+
+**Year typos:**
+```{r}
+# Identify potential typos
+table(data$year)  # Look for unexpected years
+
+# Fix systematically
+data$year[data$year == 2107] <- 2017  # Transposed digits
+data$year[data$year == 217] <- 2017   # Missing digit
+```
+
+**Transect naming inconsistencies:**
+```{r}
+# Different naming conventions across years
+# "Transect 1", "T-1", "t001", "1" all refer to the same transect
+
+data <- data |>
+  mutate(
+    transect = case_when(
+      str_detect(transect, "^Transect ") ~ str_remove(transect, "Transect "),
+      str_detect(transect, "^T-") ~ str_remove(transect, "T-"),
+      str_detect(transect, "^t0*") ~ str_remove(transect, "^t0*"),
+      TRUE ~ transect
+    ) |>
+    as.character() |>
+    as.numeric() |>  # Convert to numeric to remove leading zeros
+    factor()
+  )
+```
+
+**Park code inconsistencies:**
+```{r}
+# Standardize park codes to 4-letter NPS codes
+data <- data |>
+  mutate(
+    park = case_when(
+      park %in% c("PAIS", "Padre", "padre island") ~ "PAIS",
+      park %in% c("GUIS", "Gulf Islands") ~ "GUIS",
+      TRUE ~ park
+    )
+  )
+```
+
+## Pattern 3: Complete Custom Workflow
+
+Sometimes you need full control over every step. Here's the complete manual pipeline that `run_transect_analysis_data()` normally handles for you.
+
+### When to Use This
+
+- Debugging specific pipeline steps
+- Saving intermediate results for inspection
+- Applying custom logic between steps
+- Understanding exactly how the analysis works
+
+```{r complete-pipeline}
+# Step 1: Import and combine data (your way)
+data1 <- import_transects_park("file1.csv")
+data2 <- import_transects_park("file2.csv")
+
+# Fix issues
+data1$year[data1$year == 2017] <- 2016
+data1 <- data1 |>
+  mutate(transect = str_remove(transect, "^t0*") |> factor())
+
+# Combine
+data_raw <- bind_rows(data1, data2) |>
+  mutate(transect = as.character(transect)) |>
+  arrange(as.numeric(transect), year) |>
+  mutate(transect = factor(transect, levels = sort(unique(as.numeric(transect)))))
+
+# Step 2: Drop NAs and mark as measured points
+data_raw <- tidyr::drop_na(data_raw)
+data_typed <- mutate(data_raw, point_type = "measured")
+
+# Step 3: Clean extraneous negatives
+data_clean <- data_typed |>
+  group_by(transect, year, cross_island, park) |>
+  group_split() |>
+  lapply(remove_negatives) |>
+  bind_rows()
+
+# Step 4: Deduplicate (keep first occurrence)
+data_deduplicated <- data_clean |>
+  group_by(transect, year, distance) |>
+  slice(1) |>
+  ungroup()
+
+# Step 5: Assign accuracy values
+accuracy_table <- load_accuracy_table(
+  here::here("data", "raw", "accuracy_values.csv")
+)
+
+data_with_accuracy <- assign_accuracy(
+  data_deduplicated,
+  accuracy_table = accuracy_table,
+  special_cases = NULL,
+  verbose = TRUE
+)
+
+# Step 6: Find zero crossings
+zero_points_all <- find_zero_crossings(data_with_accuracy)
+
+# Inspect zero crossings
+table(zero_points_all$point_type)
+table(zero_points_all$confidence)
+
+# Step 7: Prepare for AUC calculation
+data_classified <- add_measured_uncertainty(data_with_accuracy)
+
+data_with_zeros <- bind_rows(
+  data_classified,
+  filter(zero_points_all, point_type %in% c("interpolated", "extrapolated"))
+) |>
+  arrange(transect, year, distance)
+
+# Step 8: Calculate common minimum
+common_mins <- calculate_common_min(
+  data_with_zeros,
+  verbose = TRUE
+)
+
+# Step 9: Add common_min points (avoid duplicates)
+data_auc_ready <- data_with_zeros |>
+  anti_join(
+    select(common_mins, transect, year, distance),
+    by = c("transect", "year", "distance")
+  ) |>
+  bind_rows(common_mins) |>
+  arrange(transect, year, distance)
+
+# Step 10: Calculate probability-weighted AUC
+auc_results_weighted <- data_auc_ready |>
+  group_by(transect, year) |>
+  group_split() |>
+  lapply(function(df) {
+    result <- calculate_auc_with_uncertainty(df)
+    result$transect <- first(df$transect)
+    result$year <- first(df$year)
+    return(result)
+  }) |>
+  bind_rows()
+
+# Step 11: Add transect metrics
+transect_metrics <- calculate_transect_metrics(data_auc_ready)
+
+auc_results <- auc_results_weighted |>
+  left_join(transect_metrics, by = c("transect", "year")) |>
+  rename(
+    auc = auc_nominal,
+    auc_sigma = auc_uncertainty
+  ) |>
+  select(
+    transect, year,
+    auc, auc_upper, auc_lower, auc_sigma, auc_uncertainty_pct,
+    overlap_m, overlap_pct, transect_length,
+    n_segments, segment_info, segments
+  )
+
+# Step 12: Package results
+results <- list(
+  data = data_auc_ready,
+  auc_results = auc_results,
+  metadata = list(
+    timestamp = Sys.time(),
+    date = Sys.Date(),
+    n_transects = length(unique(data_auc_ready$transect)),
+    n_years = length(unique(data_auc_ready$year)),
+    n_observations = nrow(data_auc_ready),
+    parks = sort(unique(data_auc_ready$park)),
+    years = sort(unique(data_auc_ready$year)),
+    workflow_version = "custom_workflow",
+    notes = "Custom workflow with manual pipeline execution"
+  )
+)
+
+# Step 13: Export results
+export_all_results(
+  data = results$data,
+  auc_results = results$auc_results,
+  processed_dir = "data/processed",
+  output_dir = "data/output",
+  verbose = TRUE
+)
+```
+
+**Important:** This is exactly what `run_transect_analysis_data()` does internally. Most users should use that function instead of manually executing these steps.
+
+## Pattern 4: Custom Accuracy Tables
+
+Sometimes you need park-specific or transect-specific accuracy values that differ from the standard table.
+
+### Creating a Custom Accuracy Table
+
+```{r custom-accuracy}
+# Load standard accuracy table
+standard_accuracy <- load_accuracy_table("accuracy_values.csv")
+
+# View structure
+head(standard_accuracy)
+#   park year sigma_h sigma_v
+# 1 PAIS 2009   0.027   0.027
+# 2 PAIS 2012   0.027   0.027
+# 3 PAIS 2016   0.027   0.027
+# 4 GUIS 2015   0.009   0.009
+
+# Create custom accuracy for a specific analysis
+custom_accuracy <- standard_accuracy |>
+  mutate(
+    # Increase uncertainty for 2009 due to equipment issues
+    sigma_h = if_else(year == 2009, 0.050, sigma_h),
+    sigma_v = if_else(year == 2009, 0.050, sigma_v)
+  )
+
+# Use custom table
+results <- run_transect_analysis_data(
+  data = my_data,
+  accuracy_table = custom_accuracy,  # Pass data frame directly
+  save_results = FALSE
+)
+```
+
+### Using Special Cases
+
+For transect-specific overrides, use the special cases table:
+
+```{r special-cases}
+# Create special cases for specific transects
+special_cases <- tibble(
+  park = c("PAIS", "PAIS"),
+  transect = c("5", "12"),
+  year = c("all", "2016"),  # "all" applies to all years
+  sigma_h = c(0.100, 0.075),  # Higher uncertainty
+  sigma_v = c(0.100, 0.075),
+  notes = c("Rough terrain", "GPS malfunction")
+)
+
+# Apply both standard and special case accuracy
+results <- run_transect_analysis_data(
+  data = my_data,
+  accuracy_table = "accuracy_values.csv",
+  special_cases = special_cases  # Pass data frame directly
+)
+```
+
+## Pattern 5: Incremental Processing and Inspection
+
+Custom workflows let you inspect and validate data at each stage.
+
+```{r incremental}
+# Import data
+data <- import_transects_park("transect_data.csv")
+
+# Inspect raw data
+summary(data)
+table(data$park, data$year)
+
+# Check for obvious issues
+range(data$elevation)  # Look for unrealistic values
+range(data$distance)   # Check distance ranges
+sum(is.na(data))       # Count missing values
+
+# Clean and inspect
+data_clean <- data |>
+  group_by(transect, year) |>
+  group_split() |>
+  lapply(remove_negatives) |>
+  bind_rows()
+
+# How many negatives were removed?
+nrow(data) - nrow(data_clean)
+
+# Assign accuracy and check
+accuracy_table <- load_accuracy_table("accuracy_values.csv")
+data_with_accuracy <- assign_accuracy(data_clean, accuracy_table)
+
+# Verify accuracy assignment
+summary(data_with_accuracy$sigma_h)
+summary(data_with_accuracy$sigma_v)
+table(data_with_accuracy$accuracy_tier)
+
+# Check for missing accuracy
+missing_accuracy <- data_with_accuracy |>
+  filter(is.na(sigma_h) | is.na(sigma_v))
+
+if (nrow(missing_accuracy) > 0) {
+  print("Missing accuracy for:")
+  print(unique(missing_accuracy[, c("park", "year", "transect")]))
+}
+
+# Continue with analysis only if validation passes
+if (nrow(missing_accuracy) == 0) {
+  results <- run_transect_analysis_data(
+    data = data_with_accuracy,
+    accuracy_table = accuracy_table
+  )
+}
+```
+
+## Comparison: Standard vs. Custom Workflow
+
+### Standard Workflow (Recommended for Most Cases)
+
+```{r standard-workflow}
+# One function call, fully automated
+results <- run_transect_analysis(
+  data_dir = "data/raw/topo",
+  output_dir = "data/output",
+  verbose = TRUE
+)
+```
+
+**Pros:**
+- Simple, one function call
+- Automatic error handling
+- Consistent processing
+- Less code to maintain
+
+**Cons:**
+- Can't combine multiple data sources
+- Can't fix data issues before analysis
+- Limited flexibility
+
+### Custom Workflow with `run_transect_analysis_data()`
+
+```{r custom-workflow-comparison}
+# Import and clean YOUR way
+data1 <- import_transects_park("file1.csv")
+data2 <- import_transects_park("file2.csv")
+
+# Fix issues
+data1$year[data1$year == 2017] <- 2016
+
+# Combine
+data <- bind_rows(data1, data2)
+
+# Run analysis on pre-processed data
+results <- run_transect_analysis_data(
+  data = data,
+  accuracy_table = "accuracy_values.csv",
+  verbose = TRUE
+)
+```
+
+**Pros:**
+- Full control over data import and cleaning
+- Can combine multiple sources
+- Can fix data issues explicitly
+- Can inspect intermediate results
+
+**Cons:**
+- More code to write
+- Need to understand data structure
+- More potential for errors
+
+## Troubleshooting Custom Workflows
+
+### Error: "data is missing required columns"
+
+```{r troubleshooting-1}
+# Check column names
+names(my_data)
+
+# Required columns:
+# - transect
+# - year
+# - distance
+# - elevation
+# - park
+
+# Fix: Rename columns to match
+my_data <- my_data |>
+  rename(
+    transect = transect_id,
+    year = survey_year
+  )
+```
+
+### Error: "Missing accuracy values for X observations"
+
+```{r troubleshooting-2}
+# Identify which park/year combinations are missing
+missing <- my_data |>
+  distinct(park, year) |>
+  anti_join(accuracy_table, by = c("park", "year"))
+
+print(missing)
+
+# Fix: Add missing rows to accuracy table
+accuracy_table <- bind_rows(
+  accuracy_table,
+  tibble(
+    park = "PAIS",
+    year = 2025,
+    sigma_h = 0.027,
+    sigma_v = 0.027
+  )
+)
+```
+
+### Error: "cross_island column missing"
+
+```{r troubleshooting-3}
+# The import functions add this automatically
+# If you're creating data from scratch, add it:
+
+my_data <- my_data |>
+  mutate(cross_island = FALSE)  # or TRUE for cross-island transects
+```
+
+### Warning: "Common minimum coincides with measured zero crossing"
+
+This is informational, not an error. It means a measured point at sea level is being used as the common minimum boundary. This is fine.
+
+## Tips for Successful Custom Workflows
+
+1. **Start with `import_transects_park()`** - It handles column validation and formatting
+2. **Inspect data at each stage** - Use `summary()`, `str()`, `table()` to verify
+3. **Save intermediate results** - Use `saveRDS()` to save cleaned data
+4. **Validate accuracy assignment** - Check for NA values in sigma_h, sigma_v
+5. **Test with a subset first** - Filter to one transect/year for debugging
+6. **Use `verbose = TRUE`** - Get detailed progress messages
+7. **Check git status** - Track changes to data files
+
+## Complete Working Example
+
+Here's a complete, executable example combining multiple patterns:
+
+```{r complete-example}
+library(GULNcoastal)
+library(dplyr)
+library(stringr)
+library(here)
+
+# Pattern 1: Multiple sources
+lidar <- import_transects_park(here("data", "raw", "lidar_2009_2016.csv"))
+survey <- import_transects_park(here("data", "raw", "survey_2017_2025.csv"))
+
+# Pattern 2: Fix data issues
+lidar$year[lidar$year == 2017] <- 2016
+lidar <- lidar |>
+  mutate(transect = str_remove(transect, "^t0*") |> factor())
+
+# Pattern 1: Combine
+data_combined <- bind_rows(
+  lidar,
+  survey |> filter(year %in% c(2017, 2025))
+) |>
+  mutate(
+    transect = as.character(transect) |> as.numeric() |> factor()
+  )
+
+# Pattern 5: Inspect before analysis
+cat("Combined data summary:\n")
+print(table(data_combined$park, data_combined$year))
+cat("\nTransects:", paste(unique(data_combined$transect), collapse = ", "), "\n")
+
+# Pattern 4: Custom accuracy (optional)
+accuracy <- load_accuracy_table(here("data", "raw", "accuracy_values.csv"))
+
+# Use the flexible analysis function
+results <- run_transect_analysis_data(
+  data = data_combined,
+  accuracy_table = accuracy,
+  special_cases = NULL,
+  save_results = TRUE,
+  processed_dir = here("data", "processed"),
+  output_dir = here("data", "output"),
+  verbose = TRUE
+)
+
+# Verify results
+cat("\nAnalysis complete!\n")
+cat("Transects processed:", results$metadata$n_transects, "\n")
+cat("Years:", paste(results$metadata$years, collapse = ", "), "\n")
+cat("AUC results rows:", nrow(results$auc_results), "\n")
+```
+
+## See Also
+
+- `vignette("introduction")` - Basic package usage
+- `vignette("filtering")` - Advanced data filtering with year selectors
+- `?run_transect_analysis_data` - Function documentation
+- `?run_transect_analysis` - Standard workflow function
+- `?import_transects_park` - Data import details
+- `?assign_accuracy` - Accuracy assignment
+- `?calculate_auc_with_uncertainty` - AUC calculation details
